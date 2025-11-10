@@ -1,372 +1,290 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Upload, Eye, Trash2, FileText, AlertCircle, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Upload, Maximize2, Play, Pause,
+  ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download
+} from 'lucide-react';
 
 export default function PDFAvisoSystem() {
   const [view, setView] = useState('viewer');
   const [file, setFile] = useState(null);
   const [pdfUrl, setPdfUrl] = useState(null);
+
+  const [pdfDoc, setPdfDoc] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [scale, setScale] = useState(1.0);
   const [isUploading, setIsUploading] = useState(false);
-  const [pdfDoc, setPdfDoc] = useState(null);
 
-  // Carrega PDF salvo ao iniciar
+  const [autoPlay, setAutoPlay] = useState(false);
+  const [autoMs, setAutoMs] = useState(10000); // 10s por página
+
+  const canvasRef = useRef(null);
+  const viewerRef = useRef(null);
+
+  // Carregar último PDF salvo do Blob ao iniciar
   useEffect(() => {
-    loadSavedPDF();
+    (async () => {
+      try {
+        const res = await fetch('/api/get-pdf', { cache: 'no-store' });
+        const data = await res.json();
+        if (data?.url) {
+          setPdfUrl(data.url);
+          localStorage.setItem('lastPdfUrl', data.url);
+        } else {
+          const cached = localStorage.getItem('lastPdfUrl');
+          if (cached) setPdfUrl(cached);
+        }
+      } catch (e) {
+        console.error('Falha ao obter último PDF:', e);
+        const cached = localStorage.getItem('lastPdfUrl');
+        if (cached) setPdfUrl(cached);
+      }
+    })();
   }, []);
 
+  // Carregar PDF com pdf.js quando pdfUrl mudar
   useEffect(() => {
-  if (!pdfDoc) return;
+    if (!pdfUrl) return;
 
-  const interval = setInterval(() => {
-    setCurrentPage((prev) => {
-      const next = prev < totalPages ? prev + 1 : 1;
-      renderPage(pdfDoc, next, scale);
-      return next;
-    });
-  }, 10000); // 10 segundos por página
+    let cancelled = false;
+    (async () => {
+      try {
+        const pdfjs = await import('pdfjs-dist/build/pdf');
+        // worker do pdf.js
+        const workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+        pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
-  return () => clearInterval(interval);
-}, [pdfDoc, totalPages, scale]);
+        const doc = await pdfjs.getDocument({ url: pdfUrl }).promise;
+        if (cancelled) return;
 
-  // Inicializa PDF.js quando houver URL
+        setPdfDoc(doc);
+        setTotalPages(doc.numPages);
+
+        // auto ajuste de escala para caber na largura
+        requestAnimationFrame(async () => {
+          await renderPage(doc, 1, fitScale(doc, 1));
+          setCurrentPage(1);
+        });
+      } catch (err) {
+        console.error('Erro ao carregar PDF:', err);
+      }
+    })();
+
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdfUrl]);
+
+  // Re-render quando scale mudar
   useEffect(() => {
-    if (pdfUrl && view === 'viewer') {
-      loadPDF(pdfUrl);
-    }
-  }, [pdfUrl, view]);
+    if (pdfDoc) renderPage(pdfDoc, currentPage, scale);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scale]);
 
-  const loadSavedPDF = async () => {
-    try {
-      const response = await fetch('/api/get-pdf');
-      const data = await response.json();
-      if (data.url) {
-        setPdfUrl(data.url);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar PDF:', error);
-    }
-  };
-
-  const loadPDF = async (url) => {
-    try {
-      const pdfjsLib = window['pdfjs-dist/build/pdf'];
-      if (!pdfjsLib) {
-        console.error('PDF.js não carregado');
-        return;
-      }
-
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-      const loadingTask = pdfjsLib.getDocument(url);
-      const pdf = await loadingTask.promise;
-      
-      setPdfDoc(pdf);
-      setTotalPages(pdf.numPages);
-      setCurrentPage(1);
-      renderPage(pdf, 1, scale);
-    } catch (error) {
-      console.error('Erro ao carregar PDF:', error);
-    }
-  };
-
-  const renderPage = async (pdf, pageNum, scaleValue) => {
-    const page = await pdf.getPage(pageNum);
-    const canvas = document.getElementById('pdf-canvas');
-    
-    if (!canvas) return;
-
-    const context = canvas.getContext('2d');
-    const viewport = page.getViewport({ scale: scaleValue });
-
-    canvas.height = viewport.height;
-    canvas.width = viewport.width;
-
-    const renderContext = {
-      canvasContext: context,
-      viewport: viewport
-    };
-
-    await page.render(renderContext).promise;
-  };
-
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile && selectedFile.type === 'application/pdf') {
-      setFile(selectedFile);
-    } else {
-      alert('Por favor, selecione apenas arquivos .pdf');
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!file) return;
-    
-    setIsUploading(true);
-    
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      const response = await fetch('/api/upload-pdf', { 
-        method: 'POST', 
-        body: formData 
+  // Auto-play (troca de páginas)
+  useEffect(() => {
+    if (!pdfDoc || totalPages < 1 || !autoPlay) return;
+    const id = setInterval(() => {
+      setCurrentPage(prev => {
+        const next = prev < totalPages ? prev + 1 : 1;
+        renderPage(pdfDoc, next, scale);
+        return next;
       });
-      
-      const data = await response.json();
-      
-if (response.ok && data.url) {
-  setPdfUrl(data.url);
-  alert('✅ PDF enviado com sucesso!');
-  setFile(null);
-  setView('viewer');
-} else {
-  const errorMessage = data.error || 'Ocorreu um erro desconhecido.';
-  console.error('Server error:', data);
-  alert('❌ Erro ao enviar PDF: ' + errorMessage);
-}
+    }, autoMs);
+    return () => clearInterval(id);
+  }, [pdfDoc, totalPages, autoPlay, autoMs, scale]);
 
-    } catch (error) {
-      // Este erro acontece se a resposta não for JSON (e.g., HTML de erro 404)
-      // ou se houver um problema de rede.
-      console.error('Upload failed:', error);
-      alert('❌ Erro ao enviar: ' + error.message + '. Verifique o console para mais detalhes.');
+  const fitScale = (doc, pageNum) => {
+    // calcula escala para caber na largura do container
+    const container = viewerRef.current;
+    if (!container) return 1;
+    const width = container.clientWidth;
+    const baseScale = 1;
+    return Math.max(0.5, Math.min(3, (width - 32) / 800)) * baseScale; // 800 ~ largura base
+  };
+
+  const renderPage = async (doc, pageNum, s) => {
+    try {
+      const page = await doc.getPage(pageNum);
+      const viewport = page.getViewport({ scale: s });
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const context = canvas.getContext('2d');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+
+      // Fundo offwhite por trás do PDF
+      context.fillStyle = '#FAF9F7';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      await page.render({ canvasContext: context, viewport }).promise;
+    } catch (err) {
+      console.error('Falha no render da página:', err);
+    }
+  };
+
+  const goTo = async (n) => {
+    if (!pdfDoc) return;
+    const page = Math.max(1, Math.min(totalPages, n));
+    setCurrentPage(page);
+    await renderPage(pdfDoc, page, scale);
+  };
+
+  // Fullscreen
+  const toggleFullscreen = () => {
+    const el = viewerRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) document.exitFullscreen();
+    else el.requestFullscreen?.();
+  };
+
+  // Upload
+  const handleUpload = async (e) => {
+    e.preventDefault();
+    if (!file) return alert('Selecione um PDF.');
+    setIsUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+
+      const res = await fetch('/api/upload-pdf', { method: 'POST', body: fd });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data?.url) {
+        setPdfUrl(data.url);
+        localStorage.setItem('lastPdfUrl', data.url);
+        setView('viewer');
+        setFile(null);
+        alert('✅ PDF enviado com sucesso!');
+      } else {
+        throw new Error(data?.error || 'Falha no upload.');
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+      alert('❌ Erro ao enviar PDF: ' + (err.message || 'desconhecido'));
     } finally {
       setIsUploading(false);
     }
   };
 
-  const nextPage = () => {
-    if (pdfDoc && currentPage < totalPages) {
-      const newPage = currentPage + 1;
-      setCurrentPage(newPage);
-      renderPage(pdfDoc, newPage, scale);
-    }
-  };
-
-  const prevPage = () => {
-    if (pdfDoc && currentPage > 1) {
-      const newPage = currentPage - 1;
-      setCurrentPage(newPage);
-      renderPage(pdfDoc, newPage, scale);
-    }
-  };
-
-  const zoomIn = () => {
-    const newScale = Math.min(scale + 0.2, 3.0);
-    setScale(newScale);
-    if (pdfDoc) renderPage(pdfDoc, currentPage, newScale);
-  };
-
-  const zoomOut = () => {
-    const newScale = Math.max(scale - 0.2, 0.5);
-    setScale(newScale);
-    if (pdfDoc) renderPage(pdfDoc, currentPage, newScale);
-  };
-
-  // Carrega PDF.js via CDN
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    script.async = true;
-    document.body.appendChild(script);
-
-    return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-    };
-  }, []);
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <header className="bg-black/30 backdrop-blur-sm border-b border-white/10">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <FileText className="w-8 h-8" />
-            Sistema de Avisos PDF
-          </h1>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setView('viewer')}
-              className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
-                view === 'viewer'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
-            >
-              <Eye className="w-4 h-4" />
-              Visualizar
-            </button>
-            <button
-              onClick={() => setView('editor')}
-              className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
-                view === 'editor'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
-            >
-              <Upload className="w-4 h-4" />
-              Editar Aviso
-            </button>
-          </div>
-        </div>
-      </header>
+    <main className="min-h-screen px-5 py-6" style={{ background: 'var(--bg, #FAF9F7)' }}>
+      {/* Header */}
+      <div className="mx-auto max-w-6xl mb-5 flex items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold tracking-tight" style={{ color: 'var(--text, #333)' }}>
+          Sistema de Avisos (PDF)
+        </h1>
 
-      <main className="container mx-auto px-4 py-8">
-        {view === 'viewer' ? (
-          <div className="max-w-6xl mx-auto">
-            {pdfUrl ? (
-              <div className="space-y-4">
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 flex items-center justify-between">
+        <div className="toolbar">
+          <button className="btn" onClick={() => setView('uploader')}>
+            <Upload className="w-4 h-4" /> Enviar PDF
+          </button>
+
+          {pdfUrl && (
+            <a className="btn-secondary" href={pdfUrl} target="_blank" rel="noreferrer">
+              <Download className="w-4 h-4" /> Abrir original
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/* Card principal */}
+      <div className="mx-auto max-w-6xl card">
+        {/* Viewer */}
+        {view === 'viewer' && (
+          <>
+            {!pdfUrl ? (
+              <div className="text-center py-16">
+                <p className="text-base" style={{ color: 'var(--muted, #6E6E6E)' }}>
+                  Nenhum PDF disponível. Envie um arquivo para começar.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Toolbar */}
+                <div className="toolbar mb-4 justify-between">
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={prevPage}
-                      disabled={currentPage === 1}
-                      className={`p-2 rounded-lg transition-colors ${
-                        currentPage === 1
-                          ? 'bg-white/5 text-white/30 cursor-not-allowed'
-                          : 'bg-purple-600 hover:bg-purple-700 text-white'
-                      }`}
-                    >
+                    <button className="btn-secondary" onClick={() => goTo(currentPage - 1)}>
                       <ChevronLeft className="w-5 h-5" />
                     </button>
-                    
-                    <span className="text-white font-medium px-4">
-                      Página {currentPage} de {totalPages}
+
+                    <span className="text-sm" style={{ color: 'var(--muted, #6E6E6E)' }}>
+                      Página {currentPage} de {totalPages || '–'}
                     </span>
-                    
-                    <button
-                      onClick={nextPage}
-                      disabled={currentPage === totalPages}
-                      className={`p-2 rounded-lg transition-colors ${
-                        currentPage === totalPages
-                          ? 'bg-white/5 text-white/30 cursor-not-allowed'
-                          : 'bg-purple-600 hover:bg-purple-700 text-white'
-                      }`}
-                    >
+
+                    <button className="btn-secondary" onClick={() => goTo(currentPage + 1)}>
                       <ChevronRight className="w-5 h-5" />
                     </button>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={zoomOut}
-                      className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
-                    >
+                    <button className="btn-secondary" onClick={() => setScale(s => Math.max(0.5, s - 0.1))}>
                       <ZoomOut className="w-5 h-5" />
                     </button>
-                    
-                    <span className="text-white font-medium px-4">
-                      {Math.round(scale * 100)}%
-                    </span>
-                    
-                    <button
-                      onClick={zoomIn}
-                      className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
->
+                    <button className="btn-secondary" onClick={() => setScale(s => Math.min(3, s + 0.1))}>
                       <ZoomIn className="w-5 h-5" />
                     </button>
 
+                    <button className="btn-secondary" onClick={toggleFullscreen}>
+                      <Maximize2 className="w-5 h-5" />
+                    </button>
+
                     <button
-  onClick={() => {
-    const elem = document.getElementById('pdf-canvas');
-    if (elem.requestFullscreen) elem.requestFullscreen();
-  }}
-  className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
->
-  <Eye className="w-5 h-5" />
-</button>
-
-                    <a
-                      href={pdfUrl}
-                      download="aviso.pdf"
-                      className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors ml-2"
+                      className="btn"
+                      onClick={() => setAutoPlay(a => !a)}
+                      title="Troca automática de páginas"
                     >
-                      <Download className="w-5 h-5" />
-                    </a>
+                      {autoPlay ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                      {autoPlay ? 'Pausar' : 'Auto'}
+                    </button>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-2xl p-8 flex justify-center overflow-auto max-h-[70vh]">
-                  <canvas id="pdf-canvas" className="max-w-full h-auto"></canvas>
+                {/* Viewer area */}
+                <div
+                  ref={viewerRef}
+                  className="w-full overflow-auto rounded-xl border"
+                  style={{ background: '#F2F2F0', borderColor: '#E6E6E6', padding: 8 }}
+                >
+                  <canvas ref={canvasRef} id="pdf-canvas" className="mx-auto block" />
                 </div>
-              </div>
-            ) : (
-              <div className="text-center text-white py-20">
-                <FileText className="w-20 h-20 mx-auto mb-4 opacity-50" />
-                <p className="text-xl">Nenhum aviso disponível</p>
-                <p className="text-white/60 mt-2">Faça upload de um arquivo PDF na aba "Editar Aviso"</p>
-              </div>
+              </>
             )}
-          </div>
-        ) : (
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
-              <h2 className="text-2xl font-bold text-white mb-6">Upload de Aviso (PDF)</h2>
-              
-              <div className="bg-blue-500/20 border border-blue-500/50 rounded-lg p-4 mb-6 flex gap-3">
-                <AlertCircle className="w-5 h-5 text-blue-300 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-blue-100">
-                  <p className="font-medium mb-1">Como funciona:</p>
-                  <ul className="list-disc list-inside space-y-1 text-blue-200/90">
-                    <li>Converta sua apresentação (PowerPoint, etc.) para PDF.</li>
-                    <li>Envie o arquivo PDF usando o campo abaixo.</li>
-                    <li>O arquivo anterior será substituído automaticamente.</li>
-                  </ul>
-                </div>
-              </div>
+          </>
+        )}
 
-              <div className="border-2 border-dashed border-white/30 rounded-xl p-8 text-center hover:border-purple-500 transition-colors">
-                <input
-                  type="file"
-                  accept=".pdf,application/pdf"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="file-upload"
-                />
-                <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
-                  <Upload className="w-16 h-16 text-purple-400 mb-4" />
-                  <p className="text-white font-medium mb-2">Clique para selecionar um arquivo</p>
-                  <p className="text-white/60 text-sm">Apenas arquivos .pdf</p>
-                </label>
-              </div>
+        {/* Uploader */}
+        {view === 'uploader' && (
+          <form className="space-y-4" onSubmit={handleUpload}>
+            <div
+              className="rounded-xl border p-6"
+              style={{ background: '#F8F7F5', borderColor: '#E6E6E6' }}
+            >
+              <p className="mb-3" style={{ color: 'var(--muted, #6E6E6E)' }}>
+                Selecione um arquivo PDF para enviar.
+              </p>
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              />
+            </div>
 
-              {file && (
-                <div className="mt-6 bg-white/5 rounded-lg p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-8 h-8 text-purple-400" />
-                    <div>
-                      <p className="text-white font-medium">{file.name}</p>
-                      <p className="text-white/60 text-sm">
-                        {(file.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
-                  </div>
-                  <button onClick={() => setFile(null)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                    <Trash2 className="w-5 h-5 text-red-400" />
-                  </button>
-                </div>
-              )}
+            <div className="flex items-center gap-2">
+              <button type="submit" className="btn" disabled={isUploading || !file}>
+                <Upload className="w-4 h-4" />
+                {isUploading ? 'Enviando...' : 'Enviar PDF'}
+              </button>
 
-              <button
-                onClick={handleUpload}
-                disabled={!file || isUploading}
-                className={`w-full mt-6 py-4 rounded-xl font-bold text-white transition-all ${
-                  !file || isUploading
-                    ? 'bg-gray-600 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'
-                }`}
-              >
-                {isUploading ? 'Enviando...' : 'Substituir Arquivo e Atualizar Aviso'}
+              <button type="button" className="btn-secondary" onClick={() => setView('viewer')}>
+                Voltar ao viewer
               </button>
             </div>
-          </div>
+          </form>
         )}
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }
