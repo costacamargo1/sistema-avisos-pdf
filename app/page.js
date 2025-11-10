@@ -18,6 +18,20 @@ export default function PDFAvisoSystem() {
     loadSavedPDF();
   }, []);
 
+  useEffect(() => {
+  if (!pdfDoc) return;
+
+  const interval = setInterval(() => {
+    setCurrentPage((prev) => {
+      const next = prev < totalPages ? prev + 1 : 1;
+      renderPage(pdfDoc, next, scale);
+      return next;
+    });
+  }, 10000); // 10 segundos por página
+
+  return () => clearInterval(interval);
+}, [pdfDoc, totalPages, scale]);
+
   // Inicializa PDF.js quando houver URL
   useEffect(() => {
     if (pdfUrl && view === 'viewer') {
@@ -256,6 +270,16 @@ if (response.ok && data.url) {
 >
                       <ZoomIn className="w-5 h-5" />
                     </button>
+
+                    <button
+  onClick={() => {
+    const elem = document.getElementById('pdf-canvas');
+    if (elem.requestFullscreen) elem.requestFullscreen();
+  }}
+  className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+>
+  <Eye className="w-5 h-5" />
+</button>
 
                     <a
                       href={pdfUrl}
