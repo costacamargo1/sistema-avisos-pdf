@@ -36,4 +36,8 @@ html,body{
   border-color: #E6E6E6;
   color: var(--text);
 }
+/* ---- Modo TV ---- */
+.cursor-hidden { cursor: none; }
+.ui-fade { transition: opacity .25s ease; }
+.ui-hidden { opacity: 0; pointer-events: none; }
 

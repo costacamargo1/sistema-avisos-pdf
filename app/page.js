@@ -1,12 +1,15 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Upload, Maximize2, Play, Pause,
-  ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download
+  ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, Monitor
 } from 'lucide-react';
 
 export default function PDFAvisoSystem() {
+  const searchParams = useSearchParams();
+
   const [view, setView] = useState('viewer');
   const [file, setFile] = useState(null);
   const [pdfUrl, setPdfUrl] = useState(null);
@@ -18,12 +21,17 @@ export default function PDFAvisoSystem() {
   const [isUploading, setIsUploading] = useState(false);
 
   const [autoPlay, setAutoPlay] = useState(false);
-  const [autoMs, setAutoMs] = useState(10000); // 10s por página
+  const [autoMs, setAutoMs] = useState(8000); // tempo por página (ms) – TV default 8s
+
+  // TV mode
+  const [tvMode, setTvMode] = useState(false);
+  const [uiVisible, setUiVisible] = useState(true);
+  const hideUiTimerRef = useRef(null);
 
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
 
-  // Carregar último PDF salvo do Blob ao iniciar
+  // ---- Carrega último PDF do Blob / cache
   useEffect(() => {
     (async () => {
       try {
@@ -36,15 +44,22 @@ export default function PDFAvisoSystem() {
           const cached = localStorage.getItem('lastPdfUrl');
           if (cached) setPdfUrl(cached);
         }
-      } catch (e) {
-        console.error('Falha ao obter último PDF:', e);
+      } catch {
         const cached = localStorage.getItem('lastPdfUrl');
         if (cached) setPdfUrl(cached);
       }
     })();
   }, []);
 
-  // Carregar PDF com pdf.js quando pdfUrl mudar
+  // ---- Ativa TV mode por query (?tv=1) ou memória local
+  useEffect(() => {
+    const q = searchParams.get('tv');
+    const stored = localStorage.getItem('tvMode');
+    const enabled = q === '1' || stored === '1';
+    if (enabled) setTvMode(true);
+  }, [searchParams]);
+
+  // ---- Carrega PDF com pdf.js
   useEffect(() => {
     if (!pdfUrl) return;
 
@@ -52,7 +67,6 @@ export default function PDFAvisoSystem() {
     (async () => {
       try {
         const pdfjs = await import('pdfjs-dist/build/pdf');
-        // worker do pdf.js
         const workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
         pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
@@ -62,9 +76,11 @@ export default function PDFAvisoSystem() {
         setPdfDoc(doc);
         setTotalPages(doc.numPages);
 
-        // auto ajuste de escala para caber na largura
+        // render inicial com "contain" (caber na largura/altura do container)
         requestAnimationFrame(async () => {
-          await renderPage(doc, 1, fitScale(doc, 1));
+          const s = await fitScaleContain(doc, 1);
+          setScale(s);
+          await renderPage(doc, 1, s);
           setCurrentPage(1);
         });
       } catch (err) {
@@ -76,13 +92,13 @@ export default function PDFAvisoSystem() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pdfUrl]);
 
-  // Re-render quando scale mudar
+  // ---- Re-render quando scale mudar
   useEffect(() => {
     if (pdfDoc) renderPage(pdfDoc, currentPage, scale);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scale]);
 
-  // Auto-play (troca de páginas)
+  // ---- Auto-play (troca de páginas)
   useEffect(() => {
     if (!pdfDoc || totalPages < 1 || !autoPlay) return;
     const id = setInterval(() => {
@@ -95,13 +111,101 @@ export default function PDFAvisoSystem() {
     return () => clearInterval(id);
   }, [pdfDoc, totalPages, autoPlay, autoMs, scale]);
 
-  const fitScale = (doc, pageNum) => {
-    // calcula escala para caber na largura do container
+  // ---- TV mode effects: autoplay + fullscreen + esconder UI/cursor
+  useEffect(() => {
+    localStorage.setItem('tvMode', tvMode ? '1' : '0');
+
+    if (tvMode) {
+      setAutoPlay(true);
+
+      // Fullscreen automático
+      const el = viewerRef.current;
+      if (el && !document.fullscreenElement) {
+        el.requestFullscreen?.().catch(() => {});
+      }
+
+      // Escala "contain" ao entrar no TV e ao resize
+      const applyFit = async () => {
+        if (!pdfDoc) return;
+        const s = await fitScaleContain(pdfDoc, currentPage);
+        setScale(s);
+        await renderPage(pdfDoc, currentPage, s);
+      };
+      applyFit();
+      const onResize = () => applyFit();
+      window.addEventListener('resize', onResize);
+
+      // Esconder UI após 3s sem movimento
+      const onMove = () => {
+        setUiVisible(true);
+        document.body.classList.remove('cursor-hidden');
+        clearTimeout(hideUiTimerRef.current);
+        hideUiTimerRef.current = setTimeout(() => {
+          setUiVisible(false);
+          document.body.classList.add('cursor-hidden');
+        }, 3000);
+      };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('keydown', onMove);
+      onMove(); // inicia timer
+
+      return () => {
+        window.removeEventListener('resize', onResize);
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('keydown', onMove);
+        clearTimeout(hideUiTimerRef.current);
+        document.body.classList.remove('cursor-hidden');
+      };
+    } else {
+      setAutoPlay(false);
+      setUiVisible(true);
+      document.body.classList.remove('cursor-hidden');
+    }
+  }, [tvMode, pdfDoc, currentPage]);
+
+  // ---- Teclado
+  useEffect(() => {
+    const onKey = async (e) => {
+      if (!pdfDoc) return;
+      if (e.key === 'ArrowRight') {
+        await goTo(currentPage + 1);
+      } else if (e.key === 'ArrowLeft') {
+        await goTo(currentPage - 1);
+      } else if (e.key.toLowerCase() === ' ') {
+        e.preventDefault();
+        setAutoPlay(a => !a);
+      } else if (e.key.toLowerCase() === 'f') {
+        toggleFullscreen();
+      } else if (e.key.toLowerCase() === 't') {
+        setTvMode(t => !t);
+      } else if (e.key === '+') {
+        setScale(s => Math.min(3, s + 0.1));
+      } else if (e.key === '-') {
+        setScale(s => Math.max(0.5, s - 0.1));
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdfDoc, currentPage]);
+
+  // ---- Helpers
+  const fitScaleContain = async (doc, pageNum) => {
     const container = viewerRef.current;
     if (!container) return 1;
-    const width = container.clientWidth;
-    const baseScale = 1;
-    return Math.max(0.5, Math.min(3, (width - 32) / 800)) * baseScale; // 800 ~ largura base
+
+    const page = await doc.getPage(pageNum);
+    const viewport1 = page.getViewport({ scale: 1 });
+    const pad = 16; // padding interno do container
+
+    const cw = container.clientWidth - pad * 2;
+    const ch = container.clientHeight - pad * 2;
+    if (cw <= 0 || ch <= 0) return 1;
+
+    const sx = cw / viewport1.width;
+    const sy = ch / viewport1.height;
+
+    return Math.max(0.5, Math.min(3, Math.min(sx, sy)));
   };
 
   const renderPage = async (doc, pageNum, s) => {
@@ -115,7 +219,7 @@ export default function PDFAvisoSystem() {
       canvas.width = viewport.width;
       canvas.height = viewport.height;
 
-      // Fundo offwhite por trás do PDF
+      // Fundo offwhite
       context.fillStyle = '#FAF9F7';
       context.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -132,15 +236,14 @@ export default function PDFAvisoSystem() {
     await renderPage(pdfDoc, page, scale);
   };
 
-  // Fullscreen
   const toggleFullscreen = () => {
     const el = viewerRef.current;
     if (!el) return;
-    if (document.fullscreenElement) document.exitFullscreen();
+    if (document.fullscreenElement) document.exitFullscreen?.();
     else el.requestFullscreen?.();
   };
 
-  // Upload
+  // ---- Upload
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!file) return alert('Selecione um PDF.');
@@ -169,15 +272,22 @@ export default function PDFAvisoSystem() {
     }
   };
 
+  // ---- UI
+  const topBarHidden = tvMode && !uiVisible;
+
   return (
     <main className="min-h-screen px-5 py-6" style={{ background: 'var(--bg, #FAF9F7)' }}>
       {/* Header */}
-      <div className="mx-auto max-w-6xl mb-5 flex items-center justify-between gap-3">
+      <div className={`mx-auto max-w-6xl mb-5 flex items-center justify-between gap-3 ui-fade ${topBarHidden ? 'ui-hidden' : ''}`}>
         <h1 className="text-xl font-semibold tracking-tight" style={{ color: 'var(--text, #333)' }}>
           Sistema de Avisos (PDF)
         </h1>
 
         <div className="toolbar">
+          <button className="btn-secondary" onClick={() => setTvMode(t => !t)} title="Modo TV (T)">
+            <Monitor className="w-4 h-4" /> {tvMode ? 'Sair do Modo TV' : 'Modo TV'}
+          </button>
+
           <button className="btn" onClick={() => setView('uploader')}>
             <Upload className="w-4 h-4" /> Enviar PDF
           </button>
@@ -191,7 +301,7 @@ export default function PDFAvisoSystem() {
       </div>
 
       {/* Card principal */}
-      <div className="mx-auto max-w-6xl card">
+      <div className="mx-auto max-w-6xl card" onDoubleClick={toggleFullscreen}>
         {/* Viewer */}
         {view === 'viewer' && (
           <>
@@ -203,10 +313,10 @@ export default function PDFAvisoSystem() {
               </div>
             ) : (
               <>
-                {/* Toolbar */}
-                <div className="toolbar mb-4 justify-between">
+                {/* Toolbar superior */}
+                <div className={`toolbar mb-4 justify-between ui-fade ${topBarHidden ? 'ui-hidden' : ''}`}>
                   <div className="flex items-center gap-2">
-                    <button className="btn-secondary" onClick={() => goTo(currentPage - 1)}>
+                    <button className="btn-secondary" onClick={() => goTo(currentPage - 1)} title="Página anterior (←)">
                       <ChevronLeft className="w-5 h-5" />
                     </button>
 
@@ -214,41 +324,66 @@ export default function PDFAvisoSystem() {
                       Página {currentPage} de {totalPages || '–'}
                     </span>
 
-                    <button className="btn-secondary" onClick={() => goTo(currentPage + 1)}>
+                    <button className="btn-secondary" onClick={() => goTo(currentPage + 1)} title="Próxima página (→)">
                       <ChevronRight className="w-5 h-5" />
                     </button>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <button className="btn-secondary" onClick={() => setScale(s => Math.max(0.5, s - 0.1))}>
+                    <label className="text-sm" style={{ color: 'var(--muted, #6E6E6E)' }}>
+                      Tempo por página:
+                      <select
+                        className="ml-2 border rounded-lg px-2 py-1"
+                        value={autoMs}
+                        onChange={(e) => setAutoMs(Number(e.target.value))}
+                        title="Tempo por página (autoplay)"
+                      >
+                        <option value={5000}>5s</option>
+                        <option value={8000}>8s</option>
+                        <option value={10000}>10s</option>
+                        <option value={15000}>15s</option>
+                        <option value={20000}>20s</option>
+                      </select>
+                    </label>
+
+                    <button className="btn-secondary" onClick={() => setScale(s => Math.max(0.5, s - 0.1))} title="Zoom out (-)">
                       <ZoomOut className="w-5 h-5" />
                     </button>
-                    <button className="btn-secondary" onClick={() => setScale(s => Math.min(3, s + 0.1))}>
+                    <button className="btn-secondary" onClick={() => setScale(s => Math.min(3, s + 0.1))} title="Zoom in (+)">
                       <ZoomIn className="w-5 h-5" />
                     </button>
 
-                    <button className="btn-secondary" onClick={toggleFullscreen}>
+                    <button className="btn-secondary" onClick={toggleFullscreen} title="Tela cheia (F)">
                       <Maximize2 className="w-5 h-5" />
                     </button>
 
-                    <button
-                      className="btn"
-                      onClick={() => setAutoPlay(a => !a)}
-                      title="Troca automática de páginas"
-                    >
+                    <button className="btn" onClick={() => setAutoPlay(a => !a)} title="Troca automática de páginas (Espaço)">
                       {autoPlay ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
                       {autoPlay ? 'Pausar' : 'Auto'}
                     </button>
                   </div>
                 </div>
 
-                {/* Viewer area */}
+                {/* Área do viewer */}
                 <div
                   ref={viewerRef}
-                  className="w-full overflow-auto rounded-xl border"
-                  style={{ background: '#F2F2F0', borderColor: '#E6E6E6', padding: 8 }}
+                  className="w-full overflow-auto rounded-xl border relative"
+                  style={{
+                    background: '#F2F2F0',
+                    borderColor: '#E6E6E6',
+                    padding: 8,
+                    // altura maior no TV
+                    height: tvMode ? 'calc(100vh - 120px)' : '70vh'
+                  }}
                 >
                   <canvas ref={canvasRef} id="pdf-canvas" className="mx-auto block" />
+                  {/* Indicador flutuante no TV */}
+                  {tvMode && (
+                    <div className={`absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-xl text-xs ui-fade ${topBarHidden ? '' : ''}`}
+                      style={{ background: 'rgba(0,0,0,.55)', color: '#fff' }}>
+                      Página {currentPage}/{totalPages || '–'} • {Math.round(scale * 100)}%
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -258,18 +393,11 @@ export default function PDFAvisoSystem() {
         {/* Uploader */}
         {view === 'uploader' && (
           <form className="space-y-4" onSubmit={handleUpload}>
-            <div
-              className="rounded-xl border p-6"
-              style={{ background: '#F8F7F5', borderColor: '#E6E6E6' }}
-            >
+            <div className="rounded-xl border p-6" style={{ background: '#F8F7F5', borderColor: '#E6E6E6' }}>
               <p className="mb-3" style={{ color: 'var(--muted, #6E6E6E)' }}>
                 Selecione um arquivo PDF para enviar.
               </p>
-              <input
-                type="file"
-                accept="application/pdf"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              />
+              <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
             </div>
 
             <div className="flex items-center gap-2">
