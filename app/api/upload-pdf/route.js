@@ -20,8 +20,9 @@ export async function POST(request) {
 
     // Envia o arquivo para o storage da Vercel
     const blob = await put(file.name, file, {
-      access: 'public',
-      token
+    access: 'public',
+    token,
+    allowOverwrite: true
     });
 
     console.log('BLOB:', blob);
