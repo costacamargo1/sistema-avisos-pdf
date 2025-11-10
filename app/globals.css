@@ -41,3 +41,10 @@ html,body{
 .ui-fade { transition: opacity .25s ease; }
 .ui-hidden { opacity: 0; pointer-events: none; }
 
+/* ✅ Corrige rotação no modo fullscreen */
+canvas:-webkit-full-screen,
+canvas:fullscreen {
+  transform: none !important;
+  rotate: 0deg !important;
+}
+
