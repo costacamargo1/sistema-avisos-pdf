@@ -58,33 +58,44 @@ export default function ClientApp() {
 
 useEffect(() => {
   if (!pdfUrl) return;
-
   let cancelled = false;
+
   (async () => {
     try {
-      const pdfjs = await import('pdfjs-dist/build/pdf');
-      const workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
-      pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+      // ✅ Importa pdf.js corretamente (modo ESM moderno)
+      const pdfjsLib = await import('pdfjs-dist');
+      await import('pdfjs-dist/build/pdf.worker.mjs');
 
-      const doc = await pdfjs.getDocument({ url: pdfUrl }).promise;
+      // ✅ Configura o worker
+      const workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+
+      // ✅ Carrega o documento
+      const loadingTask = pdfjsLib.getDocument({ url: pdfUrl });
+      const doc = await loadingTask.promise;
       if (cancelled) return;
 
       setPdfDoc(doc);
       setTotalPages(doc.numPages);
 
+      // ✅ Renderiza a primeira página ajustada ao container
       requestAnimationFrame(async () => {
         const s = await fitScaleContain(doc, 1);
         setScale(s);
         await renderPage(doc, 1, s);
         setCurrentPage(1);
+        console.log('✅ PDF renderizado:', pdfUrl);
       });
     } catch (err) {
-      console.error('Erro ao carregar PDF:', err);
+      console.error('❌ Erro ao carregar PDF:', err);
     }
   })();
 
-  return () => { cancelled = true; };
+  return () => {
+    cancelled = true;
+  };
 }, [pdfUrl]);
+
 
   useEffect(() => {
     if (pdfDoc) renderPage(pdfDoc, currentPage, scale);
