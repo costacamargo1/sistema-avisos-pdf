@@ -104,17 +104,17 @@ export default function PDFAvisoSystem() {
       
       const data = await response.json();
       
-      if (response.ok && data.success) {
-        setPdfUrl(data.url);
-        alert('✅ PDF enviado com sucesso!');
-        setFile(null);
-        setView('viewer');
-      } else {
-        // Se a resposta não for OK, ou se success for false, mostra o erro do servidor.
-        const errorMessage = data.error || 'Ocorreu um erro desconhecido.';
-        console.error('Server error:', data);
-        alert('❌ Erro ao enviar PDF: ' + data.error);
-      }
+if (response.ok && data.url) {
+  setPdfUrl(data.url);
+  alert('✅ PDF enviado com sucesso!');
+  setFile(null);
+  setView('viewer');
+} else {
+  const errorMessage = data.error || 'Ocorreu um erro desconhecido.';
+  console.error('Server error:', data);
+  alert('❌ Erro ao enviar PDF: ' + errorMessage);
+}
+
     } catch (error) {
       // Este erro acontece se a resposta não for JSON (e.g., HTML de erro 404)
       // ou se houver um problema de rede.
