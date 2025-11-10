@@ -62,15 +62,24 @@ useEffect(() => {
 
   (async () => {
     try {
-      // ✅ Importa pdf.js corretamente (modo ESM moderno)
-      const pdfjsLib = await import('pdfjs-dist');
-      await import('pdfjs-dist/build/pdf.worker.mjs');
+      // ✅ Detecta se é navegador de Smart TV (Tizen, WebOS, LG, etc.)
+      const isTv = /Tizen|Web0S|SmartTV|NetCast|TV/i.test(navigator.userAgent);
+      let pdfjsLib;
 
-      // ✅ Configura o worker
-      const workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
-      pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+      if (isTv && window.pdfjsLib) {
+        console.log("📺 Modo TV detectado — usando PDF.js via CDN global");
+        pdfjsLib = window.pdfjsLib; // usa a versão carregada em layout.js
+      } else {
+        console.log("💻 Modo moderno — importando pdfjs-dist (ESM)");
+        pdfjsLib = await import('pdfjs-dist');
+        await import('pdfjs-dist/build/pdf.worker.mjs');
 
-      // ✅ Carrega o documento
+        // ✅ Configura o worker corretamente
+        const workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+        pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+      }
+
+      // ✅ Carrega o documento PDF
       const loadingTask = pdfjsLib.getDocument({ url: pdfUrl });
       const doc = await loadingTask.promise;
       if (cancelled) return;
@@ -86,6 +95,7 @@ useEffect(() => {
         setCurrentPage(1);
         console.log('✅ PDF renderizado:', pdfUrl);
       });
+
     } catch (err) {
       console.error('❌ Erro ao carregar PDF:', err);
     }
