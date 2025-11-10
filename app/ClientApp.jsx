@@ -56,35 +56,35 @@ export default function ClientApp() {
     if (enabled) setTvMode(true);
   }, [searchParams]);
 
-  useEffect(() => {
-    if (!pdfUrl) return;
+useEffect(() => {
+  if (!pdfUrl) return;
 
-    let cancelled = false;
-    (async () => {
-      try {
-        const pdfjs = await import('pdfjs-dist/build/pdf');
-        const workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
-        pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+  let cancelled = false;
+  (async () => {
+    try {
+      const pdfjs = await import('pdfjs-dist/build/pdf');
+      const workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+      pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
-        const doc = await pdfjs.getDocument({ url: pdfUrl }).promise;
-        if (cancelled) return;
+      const doc = await pdfjs.getDocument({ url: pdfUrl }).promise;
+      if (cancelled) return;
 
-        setPdfDoc(doc);
-        setTotalPages(doc.numPages);
+      setPdfDoc(doc);
+      setTotalPages(doc.numPages);
 
-        requestAnimationFrame(async () => {
-          const s = await fitScaleContain(doc, 1);
-          setScale(s);
-          await renderPage(doc, 1, s);
-          setCurrentPage(1);
-        });
-      } catch (err) {
-        console.error('Erro ao carregar PDF:', err);
-      }
-    })();
+      requestAnimationFrame(async () => {
+        const s = await fitScaleContain(doc, 1);
+        setScale(s);
+        await renderPage(doc, 1, s);
+        setCurrentPage(1);
+      });
+    } catch (err) {
+      console.error('Erro ao carregar PDF:', err);
+    }
+  })();
 
-    return () => { cancelled = true; };
-  }, [pdfUrl]);
+  return () => { cancelled = true; };
+}, [pdfUrl]);
 
   useEffect(() => {
     if (pdfDoc) renderPage(pdfDoc, currentPage, scale);
