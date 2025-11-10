@@ -214,25 +214,28 @@ useEffect(() => {
     return Math.max(0.5, Math.min(3, Math.min(sx, sy)));
   };
 
-  const renderPage = async (doc, pageNum, s) => {
+    const renderPage = async (doc, pageNum, s) => {
     try {
-      const page = await doc.getPage(pageNum);
-      const viewport = page.getViewport({ scale: s });
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+        const page = await doc.getPage(pageNum);
+        const viewport = page.getViewport({ scale: s });
+        const canvas = canvasRef.current;
+        if (!canvas) return;
 
-      const context = canvas.getContext('2d');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
+        const context = canvas.getContext('2d');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
 
-      context.fillStyle = '#FAF9F7';
-      context.fillRect(0, 0, canvas.width, canvas.height);
+        context.fillStyle = '#FAF9F7';
+        context.fillRect(0, 0, canvas.width, canvas.height);
 
-      await page.render({ canvasContext: context, viewport }).promise;
+        // ✅ Garante orientação normal
+        context.setTransform(1, 0, 0, 1, 0, 0);
+
+        await page.render({ canvasContext: context, viewport }).promise;
     } catch (err) {
-      console.error('Falha no render da página:', err);
+        console.error('Falha no render da página:', err);
     }
-  };
+};
 
   const goTo = async (n) => {
     if (!pdfDoc) return;
