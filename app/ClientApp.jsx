@@ -282,7 +282,7 @@ useEffect(() => {
     <main className="min-h-screen px-5 py-6" style={{ background: 'var(--bg, #FAF9F7)' }}>
       <div className={`mx-auto max-w-6xl mb-5 flex items-center justify-between gap-3 ui-fade ${topBarHidden ? 'ui-hidden' : ''}`}>
         <h1 className="text-xl font-semibold tracking-tight" style={{ color: 'var(--text, #333)' }}>
-          Sistema de Avisos (PDF)
+          Avisos Licitação - Grupo FFontana
         </h1>
 
         <div className="toolbar">
