@@ -228,8 +228,15 @@ useEffect(() => {
         context.fillStyle = '#FAF9F7';
         context.fillRect(0, 0, canvas.width, canvas.height);
 
-        // ✅ Garante orientação normal
+        // Garante orientação normal
         context.setTransform(1, 0, 0, 1, 0, 0);
+       
+        // Correção para Smart TV Samsung Tizen que inverte o canvas em fullscreen
+        const ua = navigator.userAgent || '';
+        if (/Tizen/i.test(ua) || /SamsungBrowser/i.test(ua)) {
+          canvas.style.transform = 'none';
+          canvas.style.rotate = '0deg';
+        }
 
         await page.render({ canvasContext: context, viewport }).promise;
     } catch (err) {
