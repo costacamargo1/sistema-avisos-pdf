@@ -214,35 +214,42 @@ useEffect(() => {
     return Math.max(0.5, Math.min(3, Math.min(sx, sy)));
   };
 
-    const renderPage = async (doc, pageNum, s) => {
-    try {
-        const page = await doc.getPage(pageNum);
-        const viewport = page.getViewport({ scale: s });
-        const canvas = canvasRef.current;
-        if (!canvas) return;
+const renderPage = async (doc, pageNum, s) => {
+  try {
+    const page = await doc.getPage(pageNum);
+    const viewport = page.getViewport({ scale: s });
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-        const context = canvas.getContext('2d');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
+    const context = canvas.getContext("2d");
 
-        context.fillStyle = '#FAF9F7';
-        context.fillRect(0, 0, canvas.width, canvas.height);
+    // 🔹 Corrige qualquer rotação herdada do slide anterior
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Garante orientação normal
-        context.setTransform(1, 0, 0, 1, 0, 0);
-       
-        // Correção para Smart TV Samsung Tizen que inverte o canvas em fullscreen
-        const ua = navigator.userAgent || '';
-        if (/Tizen/i.test(ua) || /SamsungBrowser/i.test(ua)) {
-          canvas.style.transform = 'none';
-          canvas.style.rotate = '0deg';
-        }
+    // Atualiza dimensões
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
 
-        await page.render({ canvasContext: context, viewport }).promise;
-    } catch (err) {
-        console.error('Falha no render da página:', err);
+    // Fundo neutro (offwhite)
+    context.fillStyle = "#FAF9F7";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 🔹 Proteção extra para TVs Samsung
+    const ua = navigator.userAgent || "";
+    if (/Tizen/i.test(ua) || /SamsungBrowser/i.test(ua)) {
+      canvas.style.transform = "none";
+      canvas.style.rotate = "0deg";
+      context.setTransform(1, 0, 0, 1, 0, 0);
     }
+
+    // Renderiza a página
+    await page.render({ canvasContext: context, viewport }).promise;
+  } catch (err) {
+    console.error("Falha no render da página:", err);
+  }
 };
+
 
   const goTo = async (n) => {
     if (!pdfDoc) return;
