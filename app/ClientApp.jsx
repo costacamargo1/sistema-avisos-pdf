@@ -196,8 +196,8 @@ export const App = () => {
                 console.log("💻 Importando pdfjs-dist (ESM)...");
                 const pdfjsLib = await import('pdfjs-dist');
                 
-                // Configura o worker, usando a versão do pacote importado (padrão do código antigo)
-                const workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+                // CORREÇÃO: Usa uma URL estática para o worker para garantir que seja encontrada.
+                const workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/build/pdf.worker.min.js`;
                 pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
                 
                 pdfLoadingTaskRef.current = pdfjsLib.getDocument({ url: pdfUrl });
@@ -268,10 +268,8 @@ export const App = () => {
         if (tvMode) {
             setAutoPlay(true);
             
-            // Entrar em Tela Cheia
-            if (el && !document.fullscreenElement) {
-                 el.requestFullscreen?.().catch(() => console.warn('Tela cheia negada.'));
-            }
+            // A chamada para requestFullscreen foi movida para um handler
+            // para garantir que seja iniciada por um gesto do usuário.
 
             // Ajustar na mudança de tamanho
             // A chamada goTo(currentPage, true) garante que a escala seja recalculada para o novo tamanho
@@ -331,7 +329,7 @@ export const App = () => {
             } else if (key === 'f') {
                 toggleFullscreen();
             } else if (key === 't') {
-                setTvMode(t => !t);
+                handleToggleTvMode();
             } else if (key === '+' || key === '=') {
                 setScale(s => Math.min(3, s + 0.1));
             } else if (key === '-' || key === '_') {
@@ -344,6 +342,25 @@ export const App = () => {
 
 
     // --- Outros Handlers ---
+
+    const handleToggleTvMode = () => {
+        setTvMode(currentTvMode => {
+            const nextTvMode = !currentTvMode;
+            const el = viewerRef.current;
+            if (!el) return nextTvMode;
+
+            if (nextTvMode) {
+                if (!document.fullscreenElement) {
+                    el.requestFullscreen?.catch(() => console.warn('Tela cheia negada.'));
+                }
+            } else {
+                if (document.fullscreenElement) {
+                    document.exitFullscreen?.();
+                }
+            }
+            return nextTvMode;
+        });
+    };
 
     const toggleFullscreen = () => {
         const el = viewerRef.current;
@@ -601,7 +618,7 @@ export const App = () => {
                     </h3>
                     <p className="text-gray-600 mb-3">O Modo TV habilita a tela cheia, o auto-play e esconde a UI em inatividade.</p>
                     <Button 
-                        onClick={() => setTvMode(t => !t)}
+                        onClick={handleToggleTvMode}
                         variant={tvMode ? "primary" : "secondary"}
                     >
                         {tvMode ? 'Ativado' : 'Desativado'}
@@ -645,7 +662,7 @@ export const App = () => {
                             <Upload className="w-4 h-4" /> Enviar PDF
                         </Button>
                         
-                        <Button variant="icon" onClick={() => setTvMode(t => !t)} title="Alternar Modo TV (T)">
+                        <Button variant="icon" onClick={handleToggleTvMode} title="Alternar Modo TV (T)">
                             <Monitor className="w-5 h-5" />
                         </Button>
                         <Button variant="icon" onClick={toggleFullscreen} title="Tela Cheia (F)">
