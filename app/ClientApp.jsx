@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   Upload, Maximize2, Play, Pause,
@@ -29,6 +29,72 @@ export default function ClientApp() {
 
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
+
+  const fitScaleContain = async (doc, pageNum) => {
+    const container = viewerRef.current;
+    if (!container) return 1;
+
+    const page = await doc.getPage(pageNum);
+    const viewport1 = page.getViewport({ scale: 1 });
+    const pad = 16;
+
+    const cw = container.clientWidth - pad * 2;
+    const ch = container.clientHeight - pad * 2;
+    if (cw <= 0 || ch <= 0) return 1;
+
+    const sx = cw / viewport1.width;
+    const sy = ch / viewport1.height;
+
+    return Math.max(0.5, Math.min(3, Math.min(sx, sy)));
+  };
+
+  const renderPage = useCallback(async (doc, pageNum, s) => {
+    try {
+      const page = await doc.getPage(pageNum);
+      const viewport = page.getViewport({ scale: s });
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+  
+      const context = canvas.getContext("2d");
+  
+      // 🔹 Corrige qualquer rotação herdada do slide anterior
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.clearRect(0, 0, canvas.width, canvas.height);
+  
+      // Atualiza dimensões
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+  
+      // Fundo neutro (offwhite)
+      context.fillStyle = "#FAF9F7";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+  
+      // 🔹 Proteção extra para TVs Samsung
+      const ua = navigator.userAgent || "";
+      if (/Tizen/i.test(ua) || /SamsungBrowser/i.test(ua)) {
+        canvas.style.transform = "none";
+        canvas.style.rotate = "0deg";
+        context.setTransform(1, 0, 0, 1, 0, 0);
+      }
+  
+      // Renderiza a página
+      await page.render({ canvasContext: context, viewport }).promise;
+    } catch (err) {
+      console.error("Falha no render da página:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && pdfDoc) {
+        renderPage(pdfDoc, currentPage, scale);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [pdfDoc, currentPage, scale, renderPage]);
 
   useEffect(() => {
     (async () => {
@@ -104,13 +170,12 @@ useEffect(() => {
   return () => {
     cancelled = true;
   };
-}, [pdfUrl]);
+}, [pdfUrl, renderPage]);
 
 
   useEffect(() => {
     if (pdfDoc) renderPage(pdfDoc, currentPage, scale);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scale]);
+  }, [scale, pdfDoc, currentPage, renderPage]);
 
   useEffect(() => {
     if (!pdfDoc || totalPages < 1 || !autoPlay) return;
@@ -122,7 +187,7 @@ useEffect(() => {
       });
     }, autoMs);
     return () => clearInterval(id);
-  }, [pdfDoc, totalPages, autoPlay, autoMs, scale]);
+  }, [pdfDoc, totalPages, autoPlay, autoMs, scale, renderPage]);
 
   useEffect(() => {
     localStorage.setItem('tvMode', tvMode ? '1' : '0');
@@ -170,7 +235,7 @@ useEffect(() => {
       setUiVisible(true);
       document.body.classList.remove('cursor-hidden');
     }
-  }, [tvMode, pdfDoc, currentPage]);
+  }, [tvMode, pdfDoc, currentPage, renderPage]);
 
   useEffect(() => {
     const onKey = async (e) => {
@@ -194,69 +259,17 @@ useEffect(() => {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [pdfDoc, currentPage]);
-
-  const fitScaleContain = async (doc, pageNum) => {
-    const container = viewerRef.current;
-    if (!container) return 1;
-
-    const page = await doc.getPage(pageNum);
-    const viewport1 = page.getViewport({ scale: 1 });
-    const pad = 16;
-
-    const cw = container.clientWidth - pad * 2;
-    const ch = container.clientHeight - pad * 2;
-    if (cw <= 0 || ch <= 0) return 1;
-
-    const sx = cw / viewport1.width;
-    const sy = ch / viewport1.height;
-
-    return Math.max(0.5, Math.min(3, Math.min(sx, sy)));
-  };
-
-const renderPage = async (doc, pageNum, s) => {
-  try {
-    const page = await doc.getPage(pageNum);
-    const viewport = page.getViewport({ scale: s });
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const context = canvas.getContext("2d");
-
-    // 🔹 Corrige qualquer rotação herdada do slide anterior
-    context.setTransform(1, 0, 0, 1, 0, 0);
-    context.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Atualiza dimensões
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-
-    // Fundo neutro (offwhite)
-    context.fillStyle = "#FAF9F7";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-
-    // 🔹 Proteção extra para TVs Samsung
-    const ua = navigator.userAgent || "";
-    if (/Tizen/i.test(ua) || /SamsungBrowser/i.test(ua)) {
-      canvas.style.transform = "none";
-      canvas.style.rotate = "0deg";
-      context.setTransform(1, 0, 0, 1, 0, 0);
-    }
-
-    // Renderiza a página
-    await page.render({ canvasContext: context, viewport }).promise;
-  } catch (err) {
-    console.error("Falha no render da página:", err);
-  }
-};
+  }, [pdfDoc, currentPage, goTo]);
 
 
-  const goTo = async (n) => {
+
+
+  const goTo = useCallback(async (n) => {
     if (!pdfDoc) return;
     const page = Math.max(1, Math.min(totalPages, n));
     setCurrentPage(page);
     await renderPage(pdfDoc, page, scale);
-  };
+  }, [pdfDoc, totalPages, scale, renderPage]);
 
   const toggleFullscreen = () => {
     const el = viewerRef.current;
