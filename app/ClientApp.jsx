@@ -54,6 +54,10 @@ export default function ClientApp() {
       const viewport = page.getViewport({ scale: s });
       const canvas = canvasRef.current;
       if (!canvas) return;
+
+      // ✅ Redefine a transformação ANTES de qualquer outra coisa
+      canvas.style.transform = 'none';
+      canvas.style.rotate = '0deg';
   
       const context = canvas.getContext("2d");
   
@@ -72,8 +76,6 @@ export default function ClientApp() {
       // 🔹 Proteção extra para TVs Samsung
       const ua = navigator.userAgent || "";
       if (/Tizen/i.test(ua) || /SamsungBrowser/i.test(ua)) {
-        canvas.style.transform = "none";
-        canvas.style.rotate = "0deg";
         context.setTransform(1, 0, 0, 1, 0, 0);
       }
   
@@ -222,14 +224,10 @@ export default function ClientApp() {
   useEffect(() => {
     if (!pdfDoc || totalPages < 1 || !autoPlay) return;
     const id = setInterval(() => {
-      setCurrentPage(prev => {
-        const next = prev < totalPages ? prev + 1 : 1;
-        renderPage(pdfDoc, next, scale);
-        return next;
-      });
+      setCurrentPage(prev => (prev < totalPages ? prev + 1 : 1));
     }, autoMs);
     return () => clearInterval(id);
-  }, [pdfDoc, totalPages, autoPlay, autoMs, scale, renderPage]);
+  }, [pdfDoc, totalPages, autoPlay, autoMs]);
 
   useEffect(() => {
     localStorage.setItem('tvMode', tvMode ? '1' : '0');
