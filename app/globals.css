@@ -45,8 +45,6 @@ html,body{
 canvas:-webkit-full-screen,
 canvas:fullscreen {
   transform: none !important;
-  rotate: 0deg !important;
-  scale: 1 !important;
 }
 
 /* TVs WebOS/Tizen aplicam flip automático no Y, isso corrige */

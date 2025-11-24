@@ -51,7 +51,7 @@ export default function ClientApp() {
   const renderPage = useCallback(async (doc, pageNum, s) => {
     try {
       const page = await doc.getPage(pageNum);
-      const viewport = page.getViewport({ scale: s });
+      const viewport = page.getViewport({ scale: s, rotation: 0 });
       const canvas = canvasRef.current;
       if (!canvas) return;
 
@@ -62,8 +62,8 @@ export default function ClientApp() {
       const context = canvas.getContext("2d");
   
       // 🔹 Corrige qualquer rotação herdada do slide anterior
-      context.setTransform(1, 0, 0, 1, 0, 0);
-      context.clearRect(0, 0, canvas.width, canvas.height);
+context.setTransform(1, 0, 0, 1, 0, 0); // limpa transform
+context.clearRect(0, 0, canvas.width, canvas.height);
   
       // Atualiza dimensões
       canvas.width = viewport.width;
@@ -74,10 +74,16 @@ export default function ClientApp() {
       context.fillRect(0, 0, canvas.width, canvas.height);
   
       // 🔹 Proteção extra para TVs Samsung
-      const ua = navigator.userAgent || "";
-      if (/Tizen/i.test(ua) || /SamsungBrowser/i.test(ua)) {
-        context.setTransform(1, 0, 0, 1, 0, 0);
-      }
+const ua = navigator.userAgent;
+const isBuggyDevice =
+    /Samsung|Tizen|SmartTV/i.test(ua) ||
+    /Windows/i.test(ua); // corrigir comportamento aleatório no Chrome desktop
+
+if (isBuggyDevice) {
+    context.setTransform(1, 0, 0, 1, 0, 0); // limpa
+}
+
+      
   
       // Renderiza a página
       await page.render({ canvasContext: context, viewport }).promise;
