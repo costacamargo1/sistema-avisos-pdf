@@ -9,45 +9,7 @@ import {
 // Variável global simulada para PDF.js. Será preenchida por um script dinâmico.
 let pdfjsLib = null;
 
-// --- Funções Auxiliares para Carregamento do PDF.js ---
-const loadPdfJs = async () => {
-    if (pdfjsLib) return pdfjsLib;
 
-    return new Promise((resolve, reject) => {
-        // 1. Carrega a biblioteca principal PDF.js
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.min.mjs';
-        script.type = 'module';
-        script.onerror = () => reject(new Error("Falha ao carregar o script principal PDF.js."));
-        script.onload = async () => {
-            if (window.pdfjsLib) {
-                pdfjsLib = window.pdfjsLib;
-                
-                // 3. Define a origem do worker
-                const workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.worker.min.mjs?v=4.5.136`;
-                pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
-                resolve(pdfjsLib);
-            } else {
-                 // Tenta o fallback para a versão não-módulo
-                const fallbackScript = document.createElement('script');
-                fallbackScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.js';
-                fallbackScript.onload = () => {
-                    if (window.pdfjsLib) {
-                        pdfjsLib = window.pdfjsLib;
-                        const workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.worker.min.js?v=4.5.136`;
-                        pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
-                        resolve(pdfjsLib);
-                    } else {
-                        reject(new Error("Objeto global PDF.js não encontrado."));
-                    }
-                };
-                fallbackScript.onerror = () => reject(new Error("Falha ao carregar o script de fallback PDF.js."));
-                document.head.appendChild(fallbackScript);
-            }
-        };
-        document.head.appendChild(script);
-    });
-};
 
 const INITIAL_SCALE = 1.0;
 const TIME_OPTIONS = [5000, 8000, 10000, 15000, 20000];
@@ -218,7 +180,7 @@ export const App = () => {
     useEffect(() => {
         if (!pdfUrl) return;
 
-        // Aborta a tarefa de carregamento anterior, se estiver em execução
+        // Aborta a tarefa de carregamento anterior, se estiver em execução.
         if (pdfLoadingTaskRef.current && pdfLoadingTaskRef.current.destroy) {
             pdfLoadingTaskRef.current.destroy();
             pdfLoadingTaskRef.current = null;
@@ -231,31 +193,39 @@ export const App = () => {
 
         const loadDocument = async () => {
             try {
-                const lib = await loadPdfJs();
-                pdfLoadingTaskRef.current = lib.getDocument({ url: pdfUrl });
+                console.log("💻 Importando pdfjs-dist (ESM)...");
+                const pdfjsLib = await import('pdfjs-dist');
+                
+                // Configura o worker, usando a versão do pacote importado (padrão do código antigo)
+                const workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+                pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+                
+                pdfLoadingTaskRef.current = pdfjsLib.getDocument({ url: pdfUrl });
                 const doc = await pdfLoadingTaskRef.current.promise;
                 
                 setPdfDoc(doc);
                 setTotalPages(doc.numPages);
                 
-                // Recalcula a escala e renderiza a página 1 após o carregamento
+                // Renderiza a primeira página diretamente para evitar 'stale state'
                 const initialScale = await fitScaleContain(doc, 1);
                 setScale(initialScale);
-                // NOTA: O goTo fará a primeira renderização e definição de página
-                // await renderPage(doc, 1, initialScale); // Removido, goTo fará isso
-                // setCurrentPage(1); // Removido, goTo fará isso
-                await goTo(1, true); // Usa goTo para garantir o fluxo de renderização
+                await renderPage(doc, 1, initialScale);
+                setCurrentPage(1);
                 
                 console.log('✅ PDF carregado e renderizado:', pdfUrl);
+
             } catch (err) {
+                if (err.name === 'AbortException' || err.name === 'RenderingCancelledException') {
+                    console.log('Carregamento ou renderização do PDF cancelado.');
+                    return;
+                }
                 console.error('❌ Erro ao carregar PDF:', err);
-                // Substituí alert() por um console.log para evitar interrupções no iframe
-                console.log(`Erro ao carregar PDF. Certifique-se de que o link está acessível. (${err.message})`);
-                setPdfUrl(null); // Limpa a URL em caso de erro fatal
+                alert(`Erro ao carregar PDF. Verifique o console para mais detalhes.`);
             } finally {
                 setIsLoadingPdf(false);
             }
         };
+        
         loadDocument();
 
         // Cleanup: Cancela o carregamento do documento se o componente for desmontado
@@ -264,7 +234,7 @@ export const App = () => {
                 pdfLoadingTaskRef.current.destroy();
             }
         };
-    }, [pdfUrl, fitScaleContain, goTo]); // Adicionado goTo para garantir que o efeito chame a função mais recente
+    }, [pdfUrl, fitScaleContain, renderPage]);
 
     // --- Re-renderizar na Mudança de Escala ---
     useEffect(() => {
