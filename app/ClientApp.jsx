@@ -71,9 +71,8 @@ export const App = () => {
     const [uiVisible, setUiVisible] = useState(true);
 
     // --- Upload State ---
-    const [fileToUpload, setFileToUpload] = useState(null);
+    const [file, setFile] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
-    const [uploadError, setUploadError] = useState(null);
 
     // --- Refs ---
     const canvasRef = useRef(null);
@@ -86,22 +85,19 @@ export const App = () => {
     useEffect(() => {
         const fetchLatestPdf = async () => {
             try {
-                const res = await fetch('/api/get-pdf');
-                if (!res.ok) {
-                    // A 404 is expected if no PDF has been uploaded yet.
-                    if (res.status === 404) {
-                        console.log('Nenhum PDF encontrado no servidor.');
-                        return;
-                    }
-                    throw new Error(`Erro ao buscar PDF: ${res.statusText}`);
-                }
+                const res = await fetch('/api/get-pdf', { cache: 'no-store' });
                 const data = await res.json();
-                if (data.url) {
+                if (data?.url) {
                     setPdfUrl(data.url);
+                    localStorage.setItem('lastPdfUrl', data.url);
+                } else {
+                    const cached = localStorage.getItem('lastPdfUrl');
+                    if (cached) setPdfUrl(cached);
                 }
             } catch (error) {
-                console.error('Falha ao carregar o PDF inicial:', error);
-                // Optionally set an error state to show in the UI
+                console.error('Falha ao carregar o PDF inicial, tentando cache:', error);
+                const cached = localStorage.getItem('lastPdfUrl');
+                if (cached) setPdfUrl(cached);
             }
         };
 
@@ -388,17 +384,11 @@ export const App = () => {
 
     const handleUpload = async (e) => {
         e.preventDefault();
-        if (!fileToUpload) {
-            console.log('Selecione um PDF.');
-            setUploadError('Por favor, selecione um arquivo PDF para enviar.');
-            return;
-        }
-
+        if (!file) return alert('Selecione um PDF.');
         setIsUploading(true);
-        setUploadError(null);
 
         const formData = new FormData();
-        formData.append('file', fileToUpload);
+        formData.append('file', file);
 
         try {
             const res = await fetch('/api/upload-pdf', {
@@ -416,16 +406,18 @@ export const App = () => {
 
             if (!res.ok) throw new Error(data.error || `Erro HTTP ${res.status}`);
 
-            setPdfUrl(data.url);
-            console.log(`✅ PDF enviado com sucesso! URL: ${data.url}`);
-            alert(`✅ PDF enviado com sucesso!`);
-            
-            setView('viewer');
-            setFileToUpload(null);
+            if (data.url) {
+                setPdfUrl(data.url);
+                localStorage.setItem('lastPdfUrl', data.url); // From old code
+                setView('viewer');
+                setFile(null);
+                alert('✅ PDF enviado com sucesso!');
+            } else {
+                throw new Error(data?.error || 'Falha no upload, URL não retornada.');
+            }
 
         } catch (err) {
             console.error('Erro ao enviar PDF:', err);
-            setUploadError(err.message);
             alert(`❌ Erro ao enviar PDF: ${err.message}`);
         } finally {
             setIsUploading(false);
@@ -578,35 +570,25 @@ export const App = () => {
                 Selecione um arquivo PDF do seu computador para enviar para a nuvem. O novo arquivo substituirá o aviso atual.
             </p>
 
-            {uploadError && (
-                <div className="p-4 bg-red-100 text-red-700 border border-red-200 rounded-lg">
-                    <p className="font-bold">Erro no Upload</p>
-                    <p>{uploadError}</p>
-                </div>
-            )}
-
             <div className="p-6 border-2 border-dashed border-indigo-300 rounded-xl bg-indigo-50 hover:bg-indigo-100 transition-colors">
                 <input 
                     type="file" 
                     accept="application/pdf" 
                     className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200"
-                    onChange={(e) => {
-                        setFileToUpload(e.target.files?.[0] ?? null);
-                        setUploadError(null); // Clear error when a new file is selected
-                    }} 
+                    onChange={(e) => setFile(e.target.files?.[0] ?? null)} 
                 />
-                {fileToUpload && (
-                    <p className="mt-3 text-sm text-gray-700">Arquivo selecionado: <span className="font-bold">{fileToUpload.name}</span></p>
+                {file && (
+                    <p className="mt-3 text-sm text-gray-700">Arquivo selecionado: <span className="font-bold">{file.name}</span></p>
                 )}
             </div>
 
             <div className="flex items-center gap-3">
-                <Button type="submit" disabled={isUploading || !fileToUpload}>
+                <Button type="submit" disabled={isUploading || !file}>
                     <Upload className="w-4 h-4" />
                     {isUploading ? 'Enviando...' : 'Enviar para a Nuvem'}
                 </Button>
 
-                <Button type="button" variant="secondary" onClick={() => { setView('viewer'); setUploadError(null); }}>
+                <Button type="button" variant="secondary" onClick={() => setView('viewer')}>
                     <X className="w-4 h-4" /> Cancelar
                 </Button>
             </div>
