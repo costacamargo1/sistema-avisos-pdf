@@ -16,8 +16,11 @@ export async function POST(request) {
       throw new Error('Token BLOB_READ_WRITE_TOKEN não configurado.');
     }
 
-    // 🔥 Agora com addRandomSuffix e log detalhado
-    const blob = await put(file.name, file, {
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    // Adiciona um sufixo aleatório ao nome do arquivo para evitar conflitos
+    const blob = await put(file.name, buffer, {
       access: 'public',
       token,
       addRandomSuffix: true
