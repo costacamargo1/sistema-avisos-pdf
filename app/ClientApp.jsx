@@ -84,6 +84,48 @@ export default function ClientApp() {
     }
   }, []);
 
+  const goTo = useCallback(async (n) => {
+    if (!pdfDoc) return;
+    const page = Math.max(1, Math.min(totalPages, n));
+    setCurrentPage(page);
+    await renderPage(pdfDoc, page, scale);
+  }, [pdfDoc, totalPages, scale, renderPage]);
+
+  const toggleFullscreen = useCallback(() => {
+    const el = viewerRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else el.requestFullscreen?.();
+  }, []);
+
+  const handleUpload = useCallback(async (e) => {
+    e.preventDefault();
+    if (!file) return alert('Selecione um PDF.');
+    setIsUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+
+      const res = await fetch('/api/upload-pdf', { method: 'POST', body: fd });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data?.url) {
+        setPdfUrl(data.url);
+        localStorage.setItem('lastPdfUrl', data.url);
+        setView('viewer');
+        setFile(null);
+        alert('✅ PDF enviado com sucesso!');
+      } else {
+        throw new Error(data?.error || 'Falha no upload.');
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+      alert('❌ Erro ao enviar PDF: ' + (err.message || 'desconhecido'));
+    } finally {
+      setIsUploading(false);
+    }
+  }, [file]);
+
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && pdfDoc) {
@@ -122,55 +164,55 @@ export default function ClientApp() {
     if (enabled) setTvMode(true);
   }, [searchParams]);
 
-useEffect(() => {
-  if (!pdfUrl) return;
-  let cancelled = false;
+  useEffect(() => {
+    if (!pdfUrl) return;
+    let cancelled = false;
 
-  (async () => {
-    try {
-      // ✅ Detecta se é navegador de Smart TV (Tizen, WebOS, LG, etc.)
-      const isTv = /Tizen|Web0S|SmartTV|NetCast|TV/i.test(navigator.userAgent);
-      let pdfjsLib;
+    (async () => {
+      try {
+        // ✅ Detecta se é navegador de Smart TV (Tizen, WebOS, LG, etc.)
+        const isTv = /Tizen|Web0S|SmartTV|NetCast|TV/i.test(navigator.userAgent);
+        let pdfjsLib;
 
-      if (isTv && window.pdfjsLib) {
-        console.log("📺 Modo TV detectado — usando PDF.js via CDN global");
-        pdfjsLib = window.pdfjsLib; // usa a versão carregada em layout.js
-      } else {
-        console.log("💻 Modo moderno — importando pdfjs-dist (ESM)");
-        pdfjsLib = await import('pdfjs-dist');
-        await import('pdfjs-dist/build/pdf.worker.mjs');
+        if (isTv && window.pdfjsLib) {
+          console.log("📺 Modo TV detectado — usando PDF.js via CDN global");
+          pdfjsLib = window.pdfjsLib; // usa a versão carregada em layout.js
+        } else {
+          console.log("💻 Modo moderno — importando pdfjs-dist (ESM)");
+          pdfjsLib = await import('pdfjs-dist');
+          await import('pdfjs-dist/build/pdf.worker.mjs');
 
-        // ✅ Configura o worker corretamente
-        const workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
-        pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+          // ✅ Configura o worker corretamente
+          const workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+          pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+        }
+
+        // ✅ Carrega o documento PDF
+        const loadingTask = pdfjsLib.getDocument({ url: pdfUrl });
+        const doc = await loadingTask.promise;
+        if (cancelled) return;
+
+        setPdfDoc(doc);
+        setTotalPages(doc.numPages);
+
+        // ✅ Renderiza a primeira página ajustada ao container
+        requestAnimationFrame(async () => {
+          const s = await fitScaleContain(doc, 1);
+          setScale(s);
+          await renderPage(doc, 1, s);
+          setCurrentPage(1);
+          console.log('✅ PDF renderizado:', pdfUrl);
+        });
+
+      } catch (err) {
+        console.error('❌ Erro ao carregar PDF:', err);
       }
+    })();
 
-      // ✅ Carrega o documento PDF
-      const loadingTask = pdfjsLib.getDocument({ url: pdfUrl });
-      const doc = await loadingTask.promise;
-      if (cancelled) return;
-
-      setPdfDoc(doc);
-      setTotalPages(doc.numPages);
-
-      // ✅ Renderiza a primeira página ajustada ao container
-      requestAnimationFrame(async () => {
-        const s = await fitScaleContain(doc, 1);
-        setScale(s);
-        await renderPage(doc, 1, s);
-        setCurrentPage(1);
-        console.log('✅ PDF renderizado:', pdfUrl);
-      });
-
-    } catch (err) {
-      console.error('❌ Erro ao carregar PDF:', err);
-    }
-  })();
-
-  return () => {
-    cancelled = true;
-  };
-}, [pdfUrl, renderPage]);
+    return () => {
+      cancelled = true;
+    };
+  }, [pdfUrl, renderPage]);
 
 
   useEffect(() => {
@@ -259,52 +301,7 @@ useEffect(() => {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [pdfDoc, currentPage, goTo]);
-
-
-
-
-  const goTo = useCallback(async (n) => {
-    if (!pdfDoc) return;
-    const page = Math.max(1, Math.min(totalPages, n));
-    setCurrentPage(page);
-    await renderPage(pdfDoc, page, scale);
-  }, [pdfDoc, totalPages, scale, renderPage]);
-
-  const toggleFullscreen = () => {
-    const el = viewerRef.current;
-    if (!el) return;
-    if (document.fullscreenElement) document.exitFullscreen?.();
-    else el.requestFullscreen?.();
-  };
-
-  const handleUpload = async (e) => {
-    e.preventDefault();
-    if (!file) return alert('Selecione um PDF.');
-    setIsUploading(true);
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-
-      const res = await fetch('/api/upload-pdf', { method: 'POST', body: fd });
-      const data = await res.json().catch(() => ({}));
-
-      if (res.ok && data?.url) {
-        setPdfUrl(data.url);
-        localStorage.setItem('lastPdfUrl', data.url);
-        setView('viewer');
-        setFile(null);
-        alert('✅ PDF enviado com sucesso!');
-      } else {
-        throw new Error(data?.error || 'Falha no upload.');
-      }
-    } catch (err) {
-      console.error('Upload error:', err);
-      alert('❌ Erro ao enviar PDF: ' + (err.message || 'desconhecido'));
-    } finally {
-      setIsUploading(false);
-    }
-  };
+  }, [pdfDoc, currentPage, goTo, toggleFullscreen]);
 
   const topBarHidden = tvMode && !uiVisible;
 
