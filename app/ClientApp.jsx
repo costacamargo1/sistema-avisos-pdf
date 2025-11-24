@@ -73,6 +73,7 @@ export const App = () => {
     // --- Upload State ---
     const [fileToUpload, setFileToUpload] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadError, setUploadError] = useState(null);
 
     // --- Refs ---
     const canvasRef = useRef(null);
@@ -81,13 +82,32 @@ export const App = () => {
     const pdfLoadingTaskRef = useRef(null);
     const renderTaskRef = useRef(null); // Referência para a tarefa de renderização atual
 
-    // --- Hydration from localStorage ---
+    // --- Initial PDF Load & Settings Hydration ---
     useEffect(() => {
-        const lastPdfUrl = localStorage.getItem('lastPdfUrl');
-        if (lastPdfUrl) {
-            setPdfUrl(lastPdfUrl);
-        }
+        const fetchLatestPdf = async () => {
+            try {
+                const res = await fetch('/api/get-pdf');
+                if (!res.ok) {
+                    // A 404 is expected if no PDF has been uploaded yet.
+                    if (res.status === 404) {
+                        console.log('Nenhum PDF encontrado no servidor.');
+                        return;
+                    }
+                    throw new Error(`Erro ao buscar PDF: ${res.statusText}`);
+                }
+                const data = await res.json();
+                if (data.url) {
+                    setPdfUrl(data.url);
+                }
+            } catch (error) {
+                console.error('Falha ao carregar o PDF inicial:', error);
+                // Optionally set an error state to show in the UI
+            }
+        };
 
+        fetchLatestPdf();
+
+        // Load user settings from localStorage
         const savedAutoMs = localStorage.getItem('autoMs');
         if (savedAutoMs) {
             setAutoMs(Number(savedAutoMs));
@@ -97,7 +117,7 @@ export const App = () => {
         if (savedTvMode) {
             setTvMode(savedTvMode === '1');
         }
-    }, []);
+    }, []); // Runs only once on component mount
 
     // --- Handlers: Rendering and Scaling ---
 
@@ -368,34 +388,46 @@ export const App = () => {
 
     const handleUpload = async (e) => {
         e.preventDefault();
-        if (!fileToUpload) return console.log('Selecione um PDF.');
+        if (!fileToUpload) {
+            console.log('Selecione um PDF.');
+            setUploadError('Por favor, selecione um arquivo PDF para enviar.');
+            return;
+        }
 
-        // 1. Simular Upload (Em um aplicativo real, isso seria uma chamada de API)
         setIsUploading(true);
+        setUploadError(null);
+
+        const formData = new FormData();
+        formData.append('file', fileToUpload);
+
         try {
-            await new Promise(resolve => setTimeout(resolve, 1500)); // Simula o atraso da rede
+            const res = await fetch('/api/upload-pdf', {
+                method: 'POST',
+                body: formData
+            });
+
+            const text = await res.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch {
+                throw new Error(`Resposta inválida do servidor: ${text}`);
+            }
+
+            if (!res.ok) throw new Error(data.error || `Erro HTTP ${res.status}`);
+
+            setPdfUrl(data.url);
+            console.log(`✅ PDF enviado com sucesso! URL: ${data.url}`);
+            alert(`✅ PDF enviado com sucesso!`);
             
-            // 2. Ler o Arquivo e converter para Data URL
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const newUrl = event.target.result;
-                setPdfUrl(newUrl);
-                localStorage.setItem('lastPdfUrl', newUrl);
-                setView('viewer');
-                setFileToUpload(null);
-                setIsUploading(false);
-            };
-            reader.onerror = () => {
-                // Substituí alert() por um console.log
-                console.log("Falha ao ler o arquivo local.");
-                setIsUploading(false);
-            };
-            reader.readAsDataURL(fileToUpload);
+            setView('viewer');
+            setFileToUpload(null);
 
         } catch (err) {
-            console.error('Erro de upload:', err);
-            // Substituí alert() por um console.log e uma notificação de UI em um ambiente real
-            console.log('❌ Erro ao processar PDF: ' + (err.message || 'desconhecido'));
+            console.error('Erro ao enviar PDF:', err);
+            setUploadError(err.message);
+            alert(`❌ Erro ao enviar PDF: ${err.message}`);
+        } finally {
             setIsUploading(false);
         }
     };
@@ -543,15 +575,25 @@ export const App = () => {
         <form className="p-8 space-y-6" onSubmit={handleUpload}>
             <h2 className="text-2xl font-semibold text-gray-800">Enviar Novo PDF</h2>
             <p className="text-gray-600">
-                Selecione um arquivo PDF local. O arquivo será lido e armazenado no seu navegador para visualização (simulação de upload).
+                Selecione um arquivo PDF do seu computador para enviar para a nuvem. O novo arquivo substituirá o aviso atual.
             </p>
+
+            {uploadError && (
+                <div className="p-4 bg-red-100 text-red-700 border border-red-200 rounded-lg">
+                    <p className="font-bold">Erro no Upload</p>
+                    <p>{uploadError}</p>
+                </div>
+            )}
 
             <div className="p-6 border-2 border-dashed border-indigo-300 rounded-xl bg-indigo-50 hover:bg-indigo-100 transition-colors">
                 <input 
                     type="file" 
                     accept="application/pdf" 
                     className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200"
-                    onChange={(e) => setFileToUpload(e.target.files?.[0] ?? null)} 
+                    onChange={(e) => {
+                        setFileToUpload(e.target.files?.[0] ?? null);
+                        setUploadError(null); // Clear error when a new file is selected
+                    }} 
                 />
                 {fileToUpload && (
                     <p className="mt-3 text-sm text-gray-700">Arquivo selecionado: <span className="font-bold">{fileToUpload.name}</span></p>
@@ -561,10 +603,10 @@ export const App = () => {
             <div className="flex items-center gap-3">
                 <Button type="submit" disabled={isUploading || !fileToUpload}>
                     <Upload className="w-4 h-4" />
-                    {isUploading ? 'Processando...' : 'Carregar PDF Local'}
+                    {isUploading ? 'Enviando...' : 'Enviar para a Nuvem'}
                 </Button>
 
-                <Button type="button" variant="secondary" onClick={() => setView('viewer')}>
+                <Button type="button" variant="secondary" onClick={() => { setView('viewer'); setUploadError(null); }}>
                     <X className="w-4 h-4" /> Cancelar
                 </Button>
             </div>
