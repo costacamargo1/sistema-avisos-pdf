@@ -237,10 +237,7 @@ export default function ClientApp() {
     if (tvMode) {
       setAutoPlay(true);
 
-      const el = viewerRef.current;
-      if (el && !document.fullscreenElement) {
-        el.requestFullscreen?.().catch(() => {});
-      }
+
 
       const applyFit = async () => {
         if (!pdfDoc) return;
