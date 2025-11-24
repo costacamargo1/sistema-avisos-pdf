@@ -54,11 +54,11 @@ canvas {
   transform: none !important;
 }
 /* Correção para Smart TVs Samsung Tizen que giram canvas no modo fullscreen */
-@media all and (device-model: "UN65DU7700GXZD"), only screen and (-webkit-device-pixel-ratio:0) {
+/* @media all and (device-model: "UN65DU7700GXZD"), only screen and (-webkit-device-pixel-ratio:0) {
   canvas:-webkit-full-screen,
   canvas:fullscreen {
     transform: none !important;
-    rotate: 0deg !important;
+    rotate: 0deg !importan;
     scale: 1 !important;
   }
-}
+} */
