@@ -197,7 +197,7 @@ export const App = () => {
                 const pdfjsLib = await import('pdfjs-dist');
                 
                 // CORREÇÃO: Usa uma URL estática para o worker para garantir que seja encontrada.
-                const workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/build/pdf.worker.min.js`;
+                const workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.js`;
                 pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
                 
                 pdfLoadingTaskRef.current = pdfjsLib.getDocument({ url: pdfUrl });
