@@ -405,6 +405,13 @@ export default function ClientApp() {
               </>
             )}
             <button
+              className="btn-secondary"
+              onClick={toggleFullscreen}
+              title="Tela Cheia"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+            <button
               className={`btn-secondary ${tvMode ? 'bg-blue-50 text-blue-600 border-blue-200' : ''}`}
               onClick={() => setTvMode(t => !t)}
             >
