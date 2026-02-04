@@ -227,23 +227,38 @@ export default function ClientApp() {
     return () => clearInterval(id);
   }, [pdfDoc, totalPages, autoPlay, autoMs]);
 
+  // Efeito para redimensionamento e renderização ao mudar página ou entrar em TV mode
+  useEffect(() => {
+    if (!tvMode || !pdfDoc) return;
+    const applyFit = async () => {
+      const s = await fitScaleContain(pdfDoc, currentPage, true);
+      setScale(s);
+      await renderPage(pdfDoc, currentPage, s);
+    };
+    applyFit();
+  }, [tvMode, pdfDoc, currentPage, renderPage]);
+
+  // Efeito de gerenciamento de estado do MODO TV (Listeners, Fullscreen, Autoplay)
   useEffect(() => {
     localStorage.setItem('tvMode', tvMode ? '1' : '0');
 
     if (tvMode) {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen?.().catch(() => { });
-      }
       setAutoPlay(true);
-      const applyFit = async () => {
-        if (!pdfDoc) return;
-        const s = await fitScaleContain(pdfDoc, currentPage);
-        setScale(s);
-        await renderPage(pdfDoc, currentPage, s);
-      };
-      applyFit();
 
-      const onResize = () => applyFit();
+      // Auto Fullscreen após 3s se não estiver em tela cheia
+      const fsTimer = setTimeout(() => {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen?.().catch(() => { });
+        }
+      }, 3000);
+
+      const onResize = async () => {
+        if (pdfDoc) {
+          const s = await fitScaleContain(pdfDoc, currentPage, true);
+          setScale(s);
+          await renderPage(pdfDoc, currentPage, s);
+        }
+      };
       window.addEventListener('resize', onResize);
 
       const onMove = () => {
@@ -258,9 +273,13 @@ export default function ClientApp() {
 
       window.addEventListener('mousemove', onMove);
       window.addEventListener('keydown', onMove);
-      onMove();
+
+      // Inicialmente esconde UI para evitar flicker, o timer ou movimento ativam se necessário
+      setUiVisible(false);
+      document.body.classList.add('cursor-hidden');
 
       return () => {
+        clearTimeout(fsTimer);
         window.removeEventListener('resize', onResize);
         window.removeEventListener('mousemove', onMove);
         window.removeEventListener('keydown', onMove);
@@ -271,8 +290,17 @@ export default function ClientApp() {
       setAutoPlay(false);
       setUiVisible(true);
       document.body.classList.remove('cursor-hidden');
+
+      // Re-fit normal quando sai do modo TV
+      const applyFitNormal = async () => {
+        if (!pdfDoc) return;
+        const s = await fitScaleContain(pdfDoc, currentPage, false);
+        setScale(s);
+        await renderPage(pdfDoc, currentPage, s);
+      };
+      applyFitNormal();
     }
-  }, [tvMode, pdfDoc, currentPage, renderPage]);
+  }, [tvMode]); // Roda apenas ao mudar o modo TV, não na troca de páginas!
 
   // Handle Keyboard shortcuts
   useEffect(() => {
