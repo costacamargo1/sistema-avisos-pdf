@@ -13,7 +13,7 @@ export async function POST(request) {
     const token = process.env.BLOB_READ_WRITE_TOKEN;
 
     if (!token) {
-      throw new Error('Token BLOB_READ_WRITE_TOKEN não configurado.');
+      return NextResponse.json({ error: 'TOKEN não configurado.' }, { status: 400 });
     }
 
     const bytes = await file.arrayBuffer();

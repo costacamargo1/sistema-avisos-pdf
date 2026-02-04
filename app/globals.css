@@ -1,62 +1,150 @@
 @import "tailwindcss";
 
-:root{
-  --bg:#FAF9F7;
-  --panel:#FFFFFF;
-  --muted:#6E6E6E;
-  --text:#333333;
-  --brand:#8FAACF;   /* azul acinzentado pastel */
-  --accent:#E7D7C9;  /* bege rosado suave */
+:root {
+  /* iOS / Apple-like Palette */
+  --bg: #F5F5F7;
+  /* Apple background grey */
+  --panel: #FFFFFF;
+  /* Pure white for cards */
+  --text: #1d1d1f;
+  /* Apple text black */
+  --text-secondary: #86868b;
+  /* Apple muted text */
+  --brand: #007AFF;
+  /* System Blue */
+  --brand-hover: #0071E3;
+
+  --border: rgba(0, 0, 0, 0.08);
+  /* Subtle definition */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+
+  /* Soft UI depth */
+  --surface-raised: #FFFFFF;
+  --radius-lg: 24px;
+  --radius-md: 16px;
+  --radius-sm: 10px;
 }
 
-html,body{
+body {
   background: var(--bg);
   color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-.card{
-  @apply rounded-2xl shadow-lg p-5 border bg-white;
-  border-color: #EAEAEA;
+/* Card - Soft, floated, clean */
+.card {
+  @apply bg-white border border-transparent shadow-sm;
+  background: var(--panel);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  /* Soft diffused shadow */
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.toolbar{
-  @apply flex items-center gap-2 flex-wrap;
+/* Base Button Styles (Shared) */
+.btn,
+.btn-secondary,
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-200 active:scale-95;
+  border-radius: 99px;
+  /* Pill shape */
+  border: 1px solid transparent;
 }
 
-.btn{
-  @apply inline-flex items-center gap-2 px-4 py-2 rounded-xl transition active:scale-[.98];
+/* Primary Action */
+.btn {
+  @apply text-white shadow-sm;
   background: var(--brand);
-  color: white;
 }
-.btn:hover{ filter: brightness(0.95); }
 
-.btn-secondary{
-  @apply inline-flex items-center gap-2 px-3 py-2 rounded-xl border;
-  background: #F2F2F0;
-  border-color: #E6E6E6;
+.btn:hover {
+  background: var(--brand-hover);
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
+}
+
+/* Secondary / Tool Action */
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--text);
+  border-color: var(--border);
+  backdrop-filter: blur(8px);
+}
+
+.btn-secondary:hover {
+  background: #ffffff;
+  border-color: #d1d1d6;
+}
+
+/* Ghost / Minimal Action */
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.btn-ghost:hover {
+  background: rgba(0, 0, 0, 0.05);
   color: var(--text);
 }
-/* ---- Modo TV ---- */
-.cursor-hidden { cursor: none; }
-.ui-fade { transition: opacity .25s ease; }
-.ui-hidden { opacity: 0; pointer-events: none; }
 
-/* ✅ Corrige rotação no modo fullscreen */
+/* Inputs & Forms */
+input[type="text"],
+input[type="file"],
+select {
+  @apply px-4 py-2 text-sm transition-colors;
+  background: #fbfbfd;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--brand);
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-enter {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ---- Modo TV / Utilities ---- */
+.cursor-hidden {
+  cursor: none;
+}
+
+.ui-fade {
+  transition: opacity 0.4s ease;
+}
+
+.ui-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Canvas Fixes */
 canvas:-webkit-full-screen,
 canvas:fullscreen {
   transform: none !important;
 }
 
-/* TVs WebOS/Tizen aplicam flip automático no Y, isso corrige */
 canvas {
   transform: none !important;
 }
-/* Correção para Smart TVs Samsung Tizen que giram canvas no modo fullscreen */
-/* @media all and (device-model: "UN65DU7700GXZD"), only screen and (-webkit-device-pixel-ratio:0) {
-  canvas:-webkit-full-screen,
-  canvas:fullscreen {
-    transform: none !important;
-    rotate: 0deg !importan;
-    scale: 1 !important;
-  }
-} */

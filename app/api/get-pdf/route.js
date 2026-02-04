@@ -3,6 +3,12 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    if (!token) {
+      // Local dev fallback: return null to silence errors
+      return NextResponse.json({ url: null });
+    }
+
     const { blobs } = await list();
 
     if (!blobs || blobs.length === 0) {

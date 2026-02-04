@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   Upload, Maximize2, Play, Pause,
-  ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, Monitor
+  ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, Monitor, X
 } from 'lucide-react';
 
 export default function ClientApp() {
@@ -21,7 +21,7 @@ export default function ClientApp() {
   const [isUploading, setIsUploading] = useState(false);
 
   const [autoPlay, setAutoPlay] = useState(false);
-  const [autoMs, setAutoMs] = useState(8000); // tempo por página (ms)
+  const [autoMs, setAutoMs] = useState(8000); // 8 segundos padrão
 
   const [tvMode, setTvMode] = useState(false);
   const [uiVisible, setUiVisible] = useState(true);
@@ -30,13 +30,14 @@ export default function ClientApp() {
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
 
-  const fitScaleContain = async (doc, pageNum) => {
+  const fitScaleContain = async (doc, pageNum, isTv = false) => {
     const container = viewerRef.current;
     if (!container) return 1;
 
     const page = await doc.getPage(pageNum);
     const viewport1 = page.getViewport({ scale: 1 });
-    const pad = 16;
+    // No modo TV, removemos o padding para ser edge-to-edge
+    const pad = isTv ? 0 : 32;
 
     const cw = container.clientWidth - pad * 2;
     const ch = container.clientHeight - pad * 2;
@@ -55,37 +56,26 @@ export default function ClientApp() {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      // ✅ Redefine a transformação ANTES de qualquer outra coisa
       canvas.style.transform = 'none';
       canvas.style.rotate = '0deg';
-  
+
       const context = canvas.getContext("2d");
-  
-      // 🔹 Corrige qualquer rotação herdada do slide anterior
-context.setTransform(1, 0, 0, 1, 0, 0); // limpa transform
-context.clearRect(0, 0, canvas.width, canvas.height);
-  
-      // Atualiza dimensões
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.clearRect(0, 0, canvas.width, canvas.height);
+
       canvas.width = viewport.width;
       canvas.height = viewport.height;
-  
-      // Fundo neutro (offwhite)
-      context.fillStyle = "#FAF9F7";
+
+      // Fundo branco puro para o papel do PDF
+      context.fillStyle = "#FFFFFF";
       context.fillRect(0, 0, canvas.width, canvas.height);
-  
-      // 🔹 Proteção extra para TVs Samsung
-const ua = navigator.userAgent;
-const isBuggyDevice =
-    /Samsung|Tizen|SmartTV/i.test(ua) ||
-    /Windows/i.test(ua); // corrigir comportamento aleatório no Chrome desktop
 
-if (isBuggyDevice) {
-    context.setTransform(1, 0, 0, 1, 0, 0); // limpa
-}
+      const ua = navigator.userAgent;
+      const isBuggyDevice = /Samsung|Tizen|SmartTV/i.test(ua) || /Windows/i.test(ua);
+      if (isBuggyDevice) {
+        context.setTransform(1, 0, 0, 1, 0, 0);
+      }
 
-      
-  
-      // Renderiza a página
       await page.render({ canvasContext: context, viewport }).promise;
     } catch (err) {
       console.error("Falha no render da página:", err);
@@ -100,8 +90,7 @@ if (isBuggyDevice) {
   }, [pdfDoc, totalPages, scale, renderPage]);
 
   const toggleFullscreen = useCallback(() => {
-    const el = viewerRef.current;
-    if (!el) return;
+    const el = document.documentElement;
     if (document.fullscreenElement) document.exitFullscreen?.();
     else el.requestFullscreen?.();
   }, []);
@@ -113,7 +102,6 @@ if (isBuggyDevice) {
     try {
       const fd = new FormData();
       fd.append('file', file);
-
       const res = await fetch('/api/upload-pdf', { method: 'POST', body: fd });
       const data = await res.json().catch(() => ({}));
 
@@ -122,13 +110,24 @@ if (isBuggyDevice) {
         localStorage.setItem('lastPdfUrl', data.url);
         setView('viewer');
         setFile(null);
-        alert('✅ PDF enviado com sucesso!');
+        setTvMode(true); // Autostart TV
+        alert('✅ PDF carregado com sucesso!');
       } else {
         throw new Error(data?.error || 'Falha no upload.');
       }
     } catch (err) {
       console.error('Upload error:', err);
-      alert('❌ Erro ao enviar PDF: ' + (err.message || 'desconhecido'));
+      // Fallback para dev local / offline
+      if (file) {
+        const localUrl = URL.createObjectURL(file);
+        setPdfUrl(localUrl);
+        setView('viewer');
+        setFile(null);
+        setTvMode(true); // Autostart TV on fallback too
+        alert('⚠️ Modo Offline: PDF carregado localmente.');
+      } else {
+        alert('❌ Erro: ' + (err.message || 'desconhecido'));
+      }
     } finally {
       setIsUploading(false);
     }
@@ -141,9 +140,7 @@ if (isBuggyDevice) {
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [pdfDoc, currentPage, scale, renderPage]);
 
   useEffect(() => {
@@ -154,13 +151,20 @@ if (isBuggyDevice) {
         if (data?.url) {
           setPdfUrl(data.url);
           localStorage.setItem('lastPdfUrl', data.url);
+          setTvMode(true);
         } else {
           const cached = localStorage.getItem('lastPdfUrl');
-          if (cached) setPdfUrl(cached);
+          if (cached) {
+            setPdfUrl(cached);
+            setTvMode(true);
+          }
         }
       } catch {
         const cached = localStorage.getItem('lastPdfUrl');
-        if (cached) setPdfUrl(cached);
+        if (cached) {
+          setPdfUrl(cached);
+          setTvMode(true);
+        }
       }
     })();
   }, []);
@@ -168,8 +172,7 @@ if (isBuggyDevice) {
   useEffect(() => {
     const q = searchParams.get('tv');
     const stored = localStorage.getItem('tvMode');
-    const enabled = q === '1' || stored === '1';
-    if (enabled) setTvMode(true);
+    if (q === '1' || stored === '1') setTvMode(true);
   }, [searchParams]);
 
   useEffect(() => {
@@ -178,24 +181,17 @@ if (isBuggyDevice) {
 
     (async () => {
       try {
-        // ✅ Detecta se é navegador de Smart TV (Tizen, WebOS, LG, etc.)
         const isTv = /Tizen|Web0S|SmartTV|NetCast|TV/i.test(navigator.userAgent);
         let pdfjsLib;
 
         if (isTv && window.pdfjsLib) {
-          console.log("📺 Modo TV detectado — usando PDF.js via CDN global");
-          pdfjsLib = window.pdfjsLib; // usa a versão carregada em layout.js
+          pdfjsLib = window.pdfjsLib;
         } else {
-          console.log("💻 Modo moderno — importando pdfjs-dist (ESM)");
           pdfjsLib = await import('pdfjs-dist');
           await import('pdfjs-dist/build/pdf.worker.mjs');
-
-          // ✅ Configura o worker corretamente
-          const workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
-          pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
         }
 
-        // ✅ Carrega o documento PDF
         const loadingTask = pdfjsLib.getDocument({ url: pdfUrl });
         const doc = await loadingTask.promise;
         if (cancelled) return;
@@ -203,13 +199,12 @@ if (isBuggyDevice) {
         setPdfDoc(doc);
         setTotalPages(doc.numPages);
 
-        // ✅ Renderiza a primeira página ajustada ao container
         requestAnimationFrame(async () => {
-          const s = await fitScaleContain(doc, 1);
+          // Assume TV mode on first load for better UX if needed, or pass true if we know it defaults to TV
+          const s = await fitScaleContain(doc, 1, true);
           setScale(s);
           await renderPage(doc, 1, s);
           setCurrentPage(1);
-          console.log('✅ PDF renderizado:', pdfUrl);
         });
 
       } catch (err) {
@@ -217,11 +212,8 @@ if (isBuggyDevice) {
       }
     })();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [pdfUrl, renderPage]);
-
 
   useEffect(() => {
     if (pdfDoc) renderPage(pdfDoc, currentPage, scale);
@@ -239,10 +231,10 @@ if (isBuggyDevice) {
     localStorage.setItem('tvMode', tvMode ? '1' : '0');
 
     if (tvMode) {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen?.().catch(() => { });
+      }
       setAutoPlay(true);
-
-
-
       const applyFit = async () => {
         if (!pdfDoc) return;
         const s = await fitScaleContain(pdfDoc, currentPage);
@@ -250,6 +242,7 @@ if (isBuggyDevice) {
         await renderPage(pdfDoc, currentPage, s);
       };
       applyFit();
+
       const onResize = () => applyFit();
       window.addEventListener('resize', onResize);
 
@@ -262,6 +255,7 @@ if (isBuggyDevice) {
           document.body.classList.add('cursor-hidden');
         }, 3000);
       };
+
       window.addEventListener('mousemove', onMove);
       window.addEventListener('keydown', onMove);
       onMove();
@@ -280,25 +274,20 @@ if (isBuggyDevice) {
     }
   }, [tvMode, pdfDoc, currentPage, renderPage]);
 
+  // Handle Keyboard shortcuts
   useEffect(() => {
     const onKey = async (e) => {
       if (!pdfDoc) return;
-      if (e.key === 'ArrowRight') {
-        await goTo(currentPage + 1);
-      } else if (e.key === 'ArrowLeft') {
-        await goTo(currentPage - 1);
-      } else if (e.key.toLowerCase() === ' ') {
+      if (e.key === 'ArrowRight') await goTo(currentPage + 1);
+      else if (e.key === 'ArrowLeft') await goTo(currentPage - 1);
+      else if (e.key === ' ' || e.key === 'Spacebar') {
         e.preventDefault();
         setAutoPlay(a => !a);
-      } else if (e.key.toLowerCase() === 'f') {
-        toggleFullscreen();
-      } else if (e.key.toLowerCase() === 't') {
-        setTvMode(t => !t);
-      } else if (e.key === '+') {
-        setScale(s => Math.min(3, s + 0.1));
-      } else if (e.key === '-') {
-        setScale(s => Math.max(0.5, s - 0.1));
       }
+      else if (e.key.toLowerCase() === 'f') toggleFullscreen();
+      else if (e.key.toLowerCase() === 't') setTvMode(t => !t);
+      else if (e.key === '+') setScale(s => Math.min(3, s + 0.1));
+      else if (e.key === '-') setScale(s => Math.max(0.5, s - 0.1));
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -306,136 +295,180 @@ if (isBuggyDevice) {
 
   const topBarHidden = tvMode && !uiVisible;
 
-  return (
-    <main className="min-h-screen px-5 py-6" style={{ background: 'var(--bg, #FAF9F7)' }}>
-      <div className={`mx-auto max-w-6xl mb-5 flex items-center justify-between gap-3 ui-fade ${topBarHidden ? 'ui-hidden' : ''}`}>
-        <h1 className="text-xl font-semibold tracking-tight" style={{ color: 'var(--text, #333)' }}>
-          Avisos Licitação - Grupo FFontana
-        </h1>
+  // --- UI Components ---
 
-        <div className="toolbar">
-          <button className="btn-secondary" onClick={() => setTvMode(t => !t)} title="Modo TV (T)">
-            <Monitor className="w-4 h-4" /> {tvMode ? 'Sair do Modo TV' : 'Modo TV'}
+  if (view === 'uploader') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 animate-enter">
+        <div className="card w-full max-w-lg p-8 relative">
+          <button
+            onClick={() => setView('viewer')}
+            className="absolute top-4 right-4 btn-ghost p-2 rounded-full"
+          >
+            <X className="w-5 h-5" />
           </button>
 
-          <button className="btn" onClick={() => setView('uploader')}>
-            <Upload className="w-4 h-4" /> Enviar PDF
-          </button>
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-semibold tracking-tight mb-2">Enviar PDF</h2>
+            <p className="text-sm text-gray-500">
+              Selecione o arquivo que será exibido no painel.
+            </p>
+          </div>
 
-          {pdfUrl && (
-            <a className="btn-secondary" href={pdfUrl} target="_blank" rel="noreferrer">
-              <Download className="w-4 h-4" /> Abrir original
-            </a>
-          )}
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-6xl card" onDoubleClick={toggleFullscreen}>
-        {view === 'viewer' && (
-          <>
-            {!pdfUrl ? (
-              <div className="text-center py-16">
-                <p className="text-base" style={{ color: 'var(--muted, #6E6E6E)' }}>
-                  Nenhum PDF disponível. Envie um arquivo para começar.
-                </p>
+          <form onSubmit={handleUpload} className="space-y-6">
+            <div className="border-2 border-dashed border-gray-200 rounded-2xl p-10 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer group relative">
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+              <div className="p-4 bg-white rounded-full shadow-sm mb-4 group-hover:scale-110 transition-transform">
+                <Upload className="w-6 h-6 text-blue-500" />
               </div>
-            ) : (
-              <>
-                <div className={`toolbar mb-4 justify-between ui-fade ${topBarHidden ? 'ui-hidden' : ''}`}>
-                  <div className="flex items-center gap-2">
-                    <button className="btn-secondary" onClick={() => goTo(currentPage - 1)} title="Página anterior (←)">
-                      <ChevronLeft className="w-5 h-5" />
-                    </button>
-
-                    <span className="text-sm" style={{ color: 'var(--muted, #6E6E6E)' }}>
-                      Página {currentPage} de {totalPages || '–'}
-                    </span>
-
-                    <button className="btn-secondary" onClick={() => goTo(currentPage + 1)} title="Próxima página (→)">
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm" style={{ color: 'var(--muted, #6E6E6E)' }}>
-                      Tempo por página:
-                      <select
-                        className="ml-2 border rounded-lg px-2 py-1"
-                        value={autoMs}
-                        onChange={(e) => setAutoMs(Number(e.target.value))}
-                        title="Tempo por página (autoplay)"
-                      >
-                        <option value={5000}>5s</option>
-                        <option value={8000}>8s</option>
-                        <option value={10000}>10s</option>
-                        <option value={15000}>15s</option>
-                        <option value={20000}>20s</option>
-                      </select>
-                    </label>
-
-                    <button className="btn-secondary" onClick={() => setScale(s => Math.max(0.5, s - 0.1))} title="Zoom out (-)">
-                      <ZoomOut className="w-5 h-5" />
-                    </button>
-                    <button className="btn-secondary" onClick={() => setScale(s => Math.min(3, s + 0.1))} title="Zoom in (+)">
-                      <ZoomIn className="w-5 h-5" />
-                    </button>
-
-                    <button className="btn-secondary" onClick={toggleFullscreen} title="Tela cheia (F)">
-                      <Maximize2 className="w-5 h-5" />
-                    </button>
-
-                    <button className="btn" onClick={() => setAutoPlay(a => !a)} title="Troca automática de páginas (Espaço)">
-                      {autoPlay ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-                      {autoPlay ? 'Pausar' : 'Auto'}
-                    </button>
-                  </div>
-                </div>
-
-                <div
-                  ref={viewerRef}
-                  className="w-full overflow-auto rounded-xl border relative"
-                  style={{
-                    background: '#F2F2F0',
-                    borderColor: '#E6E6E6',
-                    padding: 8,
-                    height: tvMode ? 'calc(100vh - 120px)' : '70vh'
-                  }}
-                >
-                  <canvas ref={canvasRef} id="pdf-canvas" className="mx-auto block" />
-                  {tvMode && (
-                    <div className={`absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-xl text-xs ui-fade ${topBarHidden ? '' : ''}`}
-                      style={{ background: 'rgba(0,0,0,.55)', color: '#fff' }}>
-                      Página {currentPage}/{totalPages || '–'} • {Math.round(scale * 100)}%
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </>
-        )}
-
-        {view === 'uploader' && (
-          <form className="space-y-4" onSubmit={handleUpload}>
-            <div className="rounded-xl border p-6" style={{ background: '#F8F7F5', borderColor: '#E6E6E6' }}>
-              <p className="mb-3" style={{ color: 'var(--muted, #6E6E6E)' }}>
-                Selecione um arquivo PDF para enviar.
+              <p className="font-medium text-gray-700">
+                {file ? file.name : 'Clique ou arraste o PDF aqui'}
               </p>
-              <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
             </div>
 
-            <div className="flex items-center gap-2">
-              <button type="submit" className="btn" disabled={isUploading || !file}>
-                <Upload className="w-4 h-4" />
-                {isUploading ? 'Enviando...' : 'Enviar PDF'}
-              </button>
-
-              <button type="button" className="btn-secondary" onClick={() => setView('viewer')}>
-                Voltar ao viewer
+            <div className="flex gap-3">
+              <button
+                type="submit"
+                className="btn w-full py-3 text-base shadow-lg shadow-blue-500/20"
+                disabled={isUploading || !file}
+              >
+                {isUploading ? 'Enviando...' : 'Confirmar Envio'}
               </button>
             </div>
           </form>
-        )}
+        </div>
       </div>
+    );
+  }
+
+  // --- Viewer Mode ---
+
+  return (
+    <main className="relative min-h-screen overflow-hidden flex flex-col">
+      {/* Header Overlay */}
+      <header className={`absolute top-0 left-0 right-0 z-10 p-4 ui-fade ${topBarHidden ? 'ui-hidden' : ''}`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center overflow-hidden p-1">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+            </div>
+            <div>
+              <h1 className="text-sm font-semibold text-gray-900">Avisos Licitação</h1>
+              <p className="text-xs text-gray-500">Grupo FFontana</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {!tvMode && (
+              <>
+                <button className="btn-secondary" onClick={() => setView('uploader')}>
+                  <Upload className="w-4 h-4" /> <span className="hidden sm:inline">Trocar PDF</span>
+                </button>
+                {pdfUrl && (
+                  <a className="btn-secondary" href={pdfUrl} target="_blank" rel="noreferrer">
+                    <Download className="w-4 h-4" />
+                  </a>
+                )}
+              </>
+            )}
+            <button
+              className={`btn-secondary ${tvMode ? 'bg-blue-50 text-blue-600 border-blue-200' : ''}`}
+              onClick={() => setTvMode(t => !t)}
+            >
+              {tvMode ? 'Sair do modo TV' : 'Modo TV'}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Canvas Area */}
+      <div
+        ref={viewerRef}
+        className="flex-1 w-full h-screen relative flex items-center justify-center bg-transparent"
+        onDoubleClick={toggleFullscreen}
+      >
+        {!pdfUrl && (
+          <div className="text-center animate-enter">
+            <p className="text-gray-400 text-lg mb-4">Nenhum PDF em exibição</p>
+            <button className="btn" onClick={() => setView('uploader')}>
+              Carregar Arquivo
+            </button>
+          </div>
+        )}
+
+        <canvas
+          ref={canvasRef}
+          className={`transition-transform duration-300 ease-out ${tvMode ? 'block' : 'shadow-2xl rounded-sm max-w-[95%] max-h-[90vh]'}`}
+          style={{
+            maxHeight: tvMode ? '100vh' : '85vh',
+            maxWidth: tvMode ? '100vw' : undefined,
+            opacity: pdfUrl ? 1 : 0
+          }}
+        />
+      </div>
+
+      {/* Floating Control Bar */}
+      {pdfUrl && (
+        <div className={`absolute bottom-8 left-1/2 -translate-x-1/2 z-20 ui-fade ${topBarHidden ? 'ui-hidden' : ''}`}>
+          <div className="bg-white/90 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl p-2 flex items-center gap-1 transition-all hover:scale-105 hover:bg-white">
+
+            {/* Page Nav */}
+            <div className="flex items-center gap-1 pr-2 border-r border-gray-200">
+              <button className="btn-ghost p-2 rounded-xl" onClick={() => goTo(currentPage - 1)}>
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <span className="text-xs font-medium font-mono min-w-12 text-center text-gray-600">
+                {currentPage} / {totalPages || '-'}
+              </span>
+              <button className="btn-ghost p-2 rounded-xl" onClick={() => goTo(currentPage + 1)}>
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Playback */}
+            <div className="flex items-center gap-1 px-2 border-r border-gray-200">
+              <button
+                className={`p-2 rounded-xl transition-colors ${autoPlay ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100 text-gray-700'}`}
+                onClick={() => setAutoPlay(a => !a)}
+                title="Autoplay"
+              >
+                {autoPlay ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+              </button>
+
+              <select
+                className="bg-transparent border-none text-xs font-medium text-gray-600 focus:ring-0 cursor-pointer py-1 pr-6"
+                value={autoMs}
+                onChange={(e) => setAutoMs(Number(e.target.value))}
+              >
+                <option value={5000}>5s</option>
+                <option value={8000}>8s</option>
+                <option value={10000}>10s</option>
+                <option value={15000}>15s</option>
+              </select>
+            </div>
+
+            {/* Zoom & Screen */}
+            <div className="flex items-center gap-1 pl-2">
+              <button className="btn-ghost p-2 rounded-xl" onClick={() => setScale(s => Math.max(0.5, s - 0.1))}>
+                <ZoomOut className="w-4 h-4" />
+              </button>
+              <button className="btn-ghost p-2 rounded-xl" onClick={() => setScale(s => Math.min(3, s + 0.1))}>
+                <ZoomIn className="w-4 h-4" />
+              </button>
+              <button className="btn-ghost p-2 rounded-xl ml-1" onClick={toggleFullscreen}>
+                <Maximize2 className="w-4 h-4" />
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </main>
   );
 }
