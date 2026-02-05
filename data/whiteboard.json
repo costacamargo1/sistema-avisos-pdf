@@ -3,16 +3,41 @@
     "id": "oyzyhepd9",
     "title": "Quadro 2",
     "content": {
-      "title": "AÇÃO",
+      "title": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "center"
+            },
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": "Montserrat",
+                      "fontSize": "40px",
+                      "color": "#00358e"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "ACOMPANHAMENTOS IMPORTANTES"
+              }
+            ]
+          }
+        ]
+      },
       "body": {
         "type": "doc",
         "content": [
           {
-            "type": "orderedList",
-            "attrs": {
-              "start": 1,
-              "type": null
-            },
+            "type": "bulletList",
             "content": [
               {
                 "type": "listItem",
@@ -30,15 +55,15 @@
                             "type": "textStyle",
                             "attrs": {
                               "fontFamily": "Aptos",
-                              "fontSize": "18px",
-                              "color": "#3A5481"
+                              "fontSize": "20px",
+                              "color": "#00358E"
                             }
                           },
                           {
                             "type": "bold"
                           }
                         ],
-                        "text": "TESTE → "
+                        "text": "SESA RJ PE 0217/2025 - (BENLYSTA CMED X ESTIMADO) "
                       },
                       {
                         "type": "text",
@@ -47,42 +72,15 @@
                             "type": "textStyle",
                             "attrs": {
                               "fontFamily": "Aptos",
-                              "fontSize": "18px",
-                              "color": "#000000"
+                              "fontSize": "20px",
+                              "color": "black"
                             }
                           },
                           {
                             "type": "bold"
                           }
                         ],
-                        "text": "ACAO 1"
-                      }
-                    ]
-                  }
-                ]
-              },
-              {
-                "type": "listItem",
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "attrs": {
-                      "textAlign": "justify"
-                    },
-                    "content": [
-                      {
-                        "type": "text",
-                        "marks": [
-                          {
-                            "type": "textStyle",
-                            "attrs": {
-                              "fontFamily": "Aptos",
-                              "fontSize": "18px",
-                              "color": "#000000"
-                            }
-                          }
-                        ],
-                        "text": "TESTE 2 → ACAO 2 → XXX"
+                        "text": "→ ACOMPANHAR ACEITABILIDADE ITEM 02"
                       }
                     ]
                   }
@@ -105,21 +103,422 @@
                             "attrs": {
                               "fontFamily": "Aptos",
                               "fontSize": "20px",
-                              "color": "#3A5481"
+                              "color": "#00358E"
                             }
                           },
                           {
                             "type": "bold"
                           }
                         ],
-                        "text": "TESTE 3 → ACAO 3 →  →  →  →  →  →  → "
+                        "text": "COMPLEXO HOSPITALAR DA BAHIA  PE 141/2025 - (SACFER) "
+                      },
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "20px",
+                              "color": "black"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "→ ACOMP. ACEITABILIDADE ITEM 48"
                       }
                     ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": "justify"
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "20px",
+                              "color": "#00358E"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "SESA SC PE 0887/2025 (NINTENDANIBE 150MG) "
+                      },
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "20px",
+                              "color": "black"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "→ MONITORAR PARA INTENÇÃO DE RECURSO"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": "justify"
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "20px",
+                              "color": "#00358E"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "SESA ES PE 90717/2025 - (NINTENDANIBE 150MG) "
+                      },
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "20px",
+                              "color": "black"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "→ INTENCIONAR RECURSO OFEV"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": "justify"
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "20px",
+                              "color": "#00358E"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "SESA SC PE 0898/2025 (BENZETACIL) "
+                      },
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "20px",
+                              "color": "black"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "→ ACEITABILIDADE DO DESCRI TIVO"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": "justify"
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "20px",
+                              "color": "#00358E"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "SESA ES PE 90780/2025 "
+                      },
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "20px",
+                              "color": "black"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "→ VERIFICAR ANDAMENTO (DAPAGLIFLOZINA)"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": "justify"
+                    }
                   }
                 ]
               }
             ]
           },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": null
+            }
+          }
+        ]
+      }
+    },
+    "isVisible": true
+  },
+  {
+    "id": "jvhu8moph",
+    "title": "Quadro 2",
+    "content": {
+      "title": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "center"
+            },
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": "Montserrat",
+                      "fontSize": "44px",
+                      "color": "#00358E"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "TÍTULO"
+              }
+            ]
+          }
+        ]
+      },
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": null
+            },
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": "Aptos",
+                      "fontSize": "28pt",
+                      "color": "black"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "\"Eu disse essas coisas para que em mim vocês tenham paz. Neste mundo vocês terão aflições; contudo, tenham bom ânimo! Eu venci o mundo.\" "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "left"
+            },
+            "content": [
+              {
+                "type": "hardBreak",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": "Aptos",
+                      "fontSize": "32pt",
+                      "color": "black"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "link",
+                    "attrs": {
+                      "href": "https://www.google.com/search?q=Jo%C3%A3o+16%3A33&rlz=1C1GCEA_enBR1059BR1059&oq=VERSICULO+SOBRE+RESILIENCIA&gs_lcrp=EgZjaHJvbWUqBwgAEAAYgAQyBwgAEAAYgAQyCAgBEAAYFhgeMggIAhAAGBYYHjIICAMQABgWGB4yCAgEEAAYFhgeMgoIBRAAGAoYFhgeMgoIBhAAGIAEGKIEMgcIBxAAGO8FMgoICBAAGIAEGKIEMgoICRAAGIAEGKIE0gEIODk1NWowajeoAgCwAgA&sourceid=chrome&ie=UTF-8&ved=2ahUKEwirmNzrsaySAxX0lJUCHTGLD3IQgK4QegYIAQgBEAE",
+                      "target": "_blank",
+                      "rel": "noopener noreferrer nofollow",
+                      "class": null,
+                      "title": null
+                    }
+                  },
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": "Aptos",
+                      "fontSize": "32pt",
+                      "color": "#0164B8"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "João 16:33"
+              },
+              {
+                "type": "hardBreak",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": "\"Century Gothic\"",
+                      "fontSize": "20pt",
+                      "color": "red"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  },
+                  {
+                    "type": "underline"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "isVisible": true
+  },
+  {
+    "id": "ldmf25i5p",
+    "title": "Quadro 3",
+    "content": {
+      "title": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "center"
+            },
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": "Arial",
+                      "fontSize": "44px",
+                      "color": "#00358E"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "TÍTULO"
+              }
+            ]
+          }
+        ]
+      },
+      "body": {
+        "type": "doc",
+        "content": [
           {
             "type": "paragraph",
             "attrs": {

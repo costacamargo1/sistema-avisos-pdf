@@ -374,7 +374,33 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
         if (initialContent && typeof initialContent === 'object' && initialContent.title) {
             return initialContent.title;
         }
-        return 'TÍTULO';
+        // Return a default JSON doc for title if possible, or string which Tiptap converts
+        return {
+            type: 'doc',
+            content: [
+                {
+                    type: 'paragraph',
+                    attrs: { textAlign: 'center' },
+                    content: [
+                        {
+                            type: 'text',
+                            marks: [
+                                {
+                                    type: 'textStyle',
+                                    attrs: {
+                                        fontFamily: 'Montserrat',
+                                        fontSize: '44px',
+                                        color: '#00358E'
+                                    }
+                                },
+                                { type: 'bold' }
+                            ],
+                            text: 'TÍTULO'
+                        }
+                    ]
+                }
+            ]
+        };
     });
 
     const [bodyContent, setBodyContent] = useState(() => {
@@ -389,14 +415,17 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
         return '';
     });
 
-    // Title Editor - Simple, pre-formatted
+    const [activeEditor, setActiveEditor] = useState(null);
+
+    // Title Editor - Fully featured but styled as header
     const titleEditor = useEditor({
         immediatelyRender: false,
         extensions: [
             StarterKit.configure({
                 paragraph: {
                     HTMLAttributes: {
-                        style: 'text-align: center !important; margin: 0;'
+                        class: 'title-paragraph',
+                        // Remove forced style, let marks/classes handle it
                     }
                 }
             }),
@@ -404,17 +433,27 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
             FontFamily,
             FontSize,
             Color,
+            TextAlign.configure({
+                types: ['heading', 'paragraph'],
+            }),
+            Highlight.configure({ multicolor: true }),
         ],
         content: titleContent,
         editable: !readOnly,
         editorProps: {
             attributes: {
-                class: 'focus:outline-none',
-                style: 'font-family: Montserrat; font-size: 44px; color: #3A5481; font-weight: bold; text-align: center;'
+                class: 'focus:outline-none min-h-[60px]',
+                // Removed hardcoded style to allow formatting
             },
+            handleDOMEvents: {
+                focus: () => {
+                    setActiveEditor(titleEditor);
+                    return false;
+                }
+            }
         },
         onUpdate: ({ editor }) => {
-            const content = editor.getText();
+            const content = editor.getJSON(); // Save as JSON for rich text
             setTitleContent(content);
             if (onUpdate) {
                 onUpdate({
@@ -422,10 +461,13 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
                     body: bodyEditor?.getJSON()
                 });
             }
+        },
+        onSelectionUpdate: ({ editor }) => {
+            setActiveEditor(editor);
         }
     });
 
-    // Body Editor - Full featured with Smart Tab
+    // Body Editor - Full featured
     const bodyEditor = useEditor({
         immediatelyRender: false,
         extensions: [
@@ -447,7 +489,7 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
             setBodyContent(editor.getJSON());
             if (onUpdate) {
                 onUpdate({
-                    title: titleEditor?.getText() || '',
+                    title: titleEditor?.getJSON(),
                     body: editor.getJSON()
                 });
             }
@@ -457,8 +499,24 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
             attributes: {
                 class: 'prose prose-lg max-w-none focus:outline-none h-full p-8 leading-snug',
             },
+            handleDOMEvents: {
+                focus: () => {
+                    setActiveEditor(bodyEditor);
+                    return false;
+                }
+            }
         },
+        onSelectionUpdate: ({ editor }) => {
+            setActiveEditor(editor);
+        }
     });
+
+    // Set default active editor
+    useEffect(() => {
+        if (bodyEditor && !activeEditor) {
+            setActiveEditor(bodyEditor);
+        }
+    }, [bodyEditor, activeEditor]);
 
     // Handle readOnly prop changes
     useEffect(() => {
@@ -470,7 +528,7 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
 
     return (
         <div className={`flex flex-col h-full bg-gray-100 overflow-hidden ${readOnly ? 'bg-black flex items-center justify-center' : ''}`}>
-            {!readOnly && <MenuBar editor={bodyEditor} />}
+            {!readOnly && <MenuBar editor={activeEditor || bodyEditor} />}
 
             <div className={`flex-1 w-full overflow-hidden flex items-center justify-center ${readOnly ? '' : 'p-4 md:p-8'}`}>
                 <div
@@ -478,15 +536,19 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
                     style={{ aspectRatio: '16/9' }}
                 >
                     {/* Title Section */}
-                    <div className="border-b-2 border-gray-200 p-6 bg-gray-50">
+                    <div className="border-b-2 border-gray-200 p-6 bg-gray-50 bg-opacity-50">
                         <EditorContent
                             editor={titleEditor}
                             className="w-full"
+                            onClick={() => setActiveEditor(titleEditor)}
                         />
                     </div>
 
                     {/* Body Section */}
-                    <div className="flex-1 overflow-y-auto relative z-10">
+                    <div
+                        className="flex-1 overflow-y-auto relative z-10"
+                        onClick={() => setActiveEditor(bodyEditor)}
+                    >
                         <EditorContent
                             editor={bodyEditor}
                             className="h-full w-full"
