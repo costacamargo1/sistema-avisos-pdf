@@ -108,6 +108,34 @@ const fontSizes = ['10', '11', '12', '16', '18', '20', '24', '40', '44', '48', '
 const MenuBar = ({ editor }) => {
     // State to force re-render when editor selection/content changes
     const [, setUpdateCounter] = useState(0);
+    const [lastFontSize, setLastFontSize] = useState('');
+
+    const resolveFontSize = useCallback(() => {
+        if (!editor) return '';
+        const attrSize = editor.getAttributes('textStyle').fontSize;
+        if (attrSize) return attrSize;
+        const getSizeFromMarks = (marks) =>
+            marks?.find(mark => mark.type?.name === 'textStyle' && mark.attrs?.fontSize)?.attrs?.fontSize || '';
+        const storedSize = getSizeFromMarks(editor.state.storedMarks);
+        if (storedSize) return storedSize;
+        const cursorSize = getSizeFromMarks(editor.state.selection?.$from?.marks?.());
+        return cursorSize || '';
+    }, [editor]);
+
+    const resolveFontSizeForStepping = useCallback(() => {
+        if (!editor) return '';
+        const getSizeFromMarks = (marks) =>
+            marks?.find(mark => mark.type?.name === 'textStyle' && mark.attrs?.fontSize)?.attrs?.fontSize || '';
+        const selectionEmpty = editor.state.selection?.empty;
+        const attrSize = editor.getAttributes('textStyle').fontSize || '';
+        const storedSize = getSizeFromMarks(editor.state.storedMarks);
+        const cursorSize = getSizeFromMarks(editor.state.selection?.$from?.marks?.());
+
+        if (selectionEmpty) {
+            return storedSize || lastFontSize || attrSize || cursorSize || '';
+        }
+        return attrSize || cursorSize || storedSize || lastFontSize || '';
+    }, [editor, lastFontSize]);
 
     // Force re-render when editor state changes
     useEffect(() => {
@@ -115,6 +143,10 @@ const MenuBar = ({ editor }) => {
 
         const handleUpdate = () => {
             setUpdateCounter(c => c + 1);
+            const size = resolveFontSizeForStepping() || resolveFontSize();
+            if (size) {
+                setLastFontSize(size.replace('px', ''));
+            }
         };
 
         editor.on('selectionUpdate', handleUpdate);
@@ -148,8 +180,36 @@ const MenuBar = ({ editor }) => {
     const currentFontFamily = matchedFont ? matchedFont.value : 'default';
 
     // Get current font size from editor
-    const editorFontSize = editor.getAttributes('textStyle').fontSize || '';
-    const currentFontSize = editorFontSize.replace('px', '');
+    const editorFontSize = resolveFontSizeForStepping() || resolveFontSize();
+    const currentFontSize = editorFontSize ? editorFontSize.replace('px', '') : '';
+    const stepFontSize = currentFontSize || lastFontSize || '16';
+    const fontSizeNumbers = fontSizes.map(size => parseInt(size, 10));
+
+    const getStepIndex = (value, direction) => {
+        const num = parseInt(value, 10);
+        if (Number.isNaN(num)) {
+            const defaultIndex = Math.max(0, fontSizes.indexOf('16'));
+            return direction === 'up'
+                ? Math.min(fontSizes.length - 1, defaultIndex + 1)
+                : Math.max(0, defaultIndex - 1);
+        }
+
+        let lower = -1;
+        let higher = -1;
+        for (let i = 0; i < fontSizeNumbers.length; i++) {
+            if (fontSizeNumbers[i] <= num) lower = i;
+            if (higher === -1 && fontSizeNumbers[i] >= num) higher = i;
+        }
+        if (higher === -1) higher = fontSizeNumbers.length - 1;
+        if (lower === -1) lower = 0;
+
+        if (fontSizeNumbers[lower] === num) {
+            return direction === 'up'
+                ? Math.min(fontSizeNumbers.length - 1, lower + 1)
+                : Math.max(0, lower - 1);
+        }
+        return direction === 'up' ? higher : lower;
+    };
 
     return (
         <div className="flex flex-wrap gap-2 p-3 bg-white border-b border-gray-200 rounded-t-xl sticky top-0 z-10 items-center">
@@ -190,9 +250,10 @@ const MenuBar = ({ editor }) => {
                 {/* Decrease Font Size Button */}
                 <button
                     onClick={() => {
-                        const currentIndex = fontSizes.indexOf(currentFontSize);
-                        const newIndex = currentIndex > 0 ? currentIndex - 1 : 0;
-                        editor.chain().focus().setFontSize(`${fontSizes[newIndex]}px`).run();
+                        const newIndex = getStepIndex(stepFontSize, 'down');
+                        const nextSize = fontSizes[newIndex];
+                        editor.chain().focus().setFontSize(`${nextSize}px`).run();
+                        setLastFontSize(nextSize);
                     }}
                     className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
                     title="Diminuir Fonte"
@@ -204,9 +265,10 @@ const MenuBar = ({ editor }) => {
                 {/* Increase Font Size Button */}
                 <button
                     onClick={() => {
-                        const currentIndex = fontSizes.indexOf(currentFontSize);
-                        const newIndex = currentIndex < fontSizes.length - 1 ? currentIndex + 1 : (currentIndex === -1 ? 0 : fontSizes.length - 1);
-                        editor.chain().focus().setFontSize(`${fontSizes[newIndex]}px`).run();
+                        const newIndex = getStepIndex(stepFontSize, 'up');
+                        const nextSize = fontSizes[newIndex];
+                        editor.chain().focus().setFontSize(`${nextSize}px`).run();
+                        setLastFontSize(nextSize);
                     }}
                     className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
                     title="Aumentar Fonte"
