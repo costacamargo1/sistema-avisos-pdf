@@ -4,8 +4,11 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   Upload, Maximize2, Play, Pause,
-  ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, Monitor, X
+  ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, Monitor, X,
+  LayoutTemplate, Settings
 } from 'lucide-react';
+import Link from 'next/link';
+import Whiteboard from './components/Whiteboard';
 
 export default function ClientApp() {
   const searchParams = useSearchParams();
@@ -22,6 +25,12 @@ export default function ClientApp() {
 
   const [autoPlay, setAutoPlay] = useState(false);
   const [autoMs, setAutoMs] = useState(8000); // 8 segundos padrão
+
+  const [wbEnabled, setWbEnabled] = useState(true);
+  const [wbDuration, setWbDuration] = useState(15000); // 15s no quadro
+  const [tvPhase, setTvPhase] = useState('pdf'); // 'pdf' | 'whiteboard'
+  const [currentBoardIndex, setCurrentBoardIndex] = useState(0);
+  const [visibleBoards, setVisibleBoards] = useState([]);
 
   const [tvMode, setTvMode] = useState(false);
   const [uiVisible, setUiVisible] = useState(true);
@@ -220,12 +229,95 @@ export default function ClientApp() {
   }, [scale, pdfDoc, currentPage, renderPage]);
 
   useEffect(() => {
-    if (!pdfDoc || totalPages < 1 || !autoPlay) return;
-    const id = setInterval(() => {
-      setCurrentPage(prev => (prev < totalPages ? prev + 1 : 1));
-    }, autoMs);
+    if (!tvMode || !autoPlay) return;
+
+    const runLoop = async () => {
+      if (tvPhase === 'pdf') {
+        if (!pdfDoc || totalPages === 0) {
+          // If no PDF, check for boards immediately
+          try {
+            const res = await fetch('/api/whiteboard');
+            const data = await res.json();
+            const boards = Array.isArray(data) ? data : (data.content ? [{ ...data, isVisible: data.isVisible ?? true }] : []);
+            const active = boards.filter(b => b.isVisible);
+
+            if (active.length > 0) {
+              setVisibleBoards(active);
+              setCurrentBoardIndex(0);
+              setTvPhase('whiteboard');
+            }
+          } catch { }
+          return;
+        }
+
+        // Logic to advance pages
+        if (currentPage < totalPages) {
+          setCurrentPage(p => p + 1);
+        } else {
+          // Finished PDF, check for boards
+          try {
+            const res = await fetch('/api/whiteboard');
+            const data = await res.json();
+            const boards = Array.isArray(data) ? data : (data.content ? [{ ...data, isVisible: data.isVisible ?? true }] : []);
+            const active = boards.filter(b => b.isVisible);
+
+            if (active.length > 0) {
+              setVisibleBoards(active);
+              setCurrentBoardIndex(0);
+              setTvPhase('whiteboard');
+            } else {
+              setCurrentPage(1); // Loop PDF
+            }
+          } catch (e) {
+            setCurrentPage(1);
+          }
+        }
+      } else if (tvPhase === 'whiteboard') {
+        const fetchBoards = async () => {
+          try {
+            const res = await fetch('/api/whiteboard');
+            const data = await res.json();
+            const boards = Array.isArray(data) ? data : (data.content ? [{ ...data, isVisible: data.isVisible ?? true }] : []);
+            return boards.filter(b => b.isVisible);
+          } catch { return []; }
+        };
+
+        // If we are at the end of boards list
+        // We need to check if valid boards still exist
+        const activeBoards = await fetchBoards();
+
+        if (activeBoards.length === 0) {
+          // No boards visible
+          if (pdfDoc) {
+            setTvPhase('pdf');
+            setCurrentPage(1);
+          }
+          // If no PDF and no boards, do nothing (wait)
+        } else if (currentBoardIndex < activeBoards.length - 1) {
+          // Move to next board
+          setCurrentBoardIndex(i => i + 1);
+        } else {
+          // End of boards cycle
+          if (pdfDoc) {
+            // Include refresh check? 
+            // For now, back to PDF
+            setTvPhase('pdf');
+            setCurrentPage(1);
+            setCurrentBoardIndex(0);
+          } else {
+            // No PDF, Loop boards
+            setCurrentBoardIndex(0);
+            // Verify if visibleBoards needs update 
+            setVisibleBoards(activeBoards);
+          }
+        }
+      }
+    };
+
+    const intervalTime = tvPhase === 'whiteboard' ? wbDuration : autoMs;
+    const id = setInterval(runLoop, intervalTime);
     return () => clearInterval(id);
-  }, [pdfDoc, totalPages, autoPlay, autoMs]);
+  }, [tvMode, autoPlay, tvPhase, currentPage, totalPages, pdfDoc, wbDuration, autoMs, currentBoardIndex]);
 
   // Efeito para redimensionamento e renderização ao mudar página ou entrar em TV mode
   useEffect(() => {
@@ -262,21 +354,30 @@ export default function ClientApp() {
       window.addEventListener('resize', onResize);
 
       const onMove = () => {
+        // Se o mouse estiver sobre o header, não esconde
+        if (headerHoverRef.current) {
+          setUiVisible(true);
+          document.body.classList.remove('cursor-hidden');
+          clearTimeout(hideUiTimerRef.current);
+          return;
+        }
+
         setUiVisible(true);
         document.body.classList.remove('cursor-hidden');
         clearTimeout(hideUiTimerRef.current);
         hideUiTimerRef.current = setTimeout(() => {
-          setUiVisible(false);
-          document.body.classList.add('cursor-hidden');
-        }, 3000);
+          if (!headerHoverRef.current) {
+            setUiVisible(false);
+            document.body.classList.add('cursor-hidden');
+          }
+        }, 4000);
       };
 
       window.addEventListener('mousemove', onMove);
       window.addEventListener('keydown', onMove);
 
-      // Inicialmente esconde UI para evitar flicker, o timer ou movimento ativam se necessário
-      setUiVisible(false);
-      document.body.classList.add('cursor-hidden');
+      // Inicialmente mostra a UI por 4s para o usuário se situar
+      onMove();
 
       return () => {
         clearTimeout(fsTimer);
@@ -290,6 +391,7 @@ export default function ClientApp() {
       setAutoPlay(false);
       setUiVisible(true);
       document.body.classList.remove('cursor-hidden');
+      setTvPhase('pdf'); // Reset phase when exiting TV
 
       // Re-fit normal quando sai do modo TV
       const applyFitNormal = async () => {
@@ -322,6 +424,7 @@ export default function ClientApp() {
   }, [pdfDoc, currentPage, goTo, toggleFullscreen]);
 
   const topBarHidden = tvMode && !uiVisible;
+  const headerHoverRef = useRef(false);
 
   // --- UI Components ---
 
@@ -379,7 +482,25 @@ export default function ClientApp() {
   return (
     <main className="relative min-h-screen overflow-hidden flex flex-col">
       {/* Header Overlay */}
-      <header className={`absolute top-0 left-0 right-0 z-10 p-4 ui-fade ${topBarHidden ? 'ui-hidden' : ''}`}>
+      <header
+        className={`absolute top-0 left-0 right-0 z-50 p-4 ui-fade ${topBarHidden ? 'ui-hidden' : ''}`}
+        onMouseEnter={() => {
+          headerHoverRef.current = true;
+          clearTimeout(hideUiTimerRef.current);
+          setUiVisible(true);
+          document.body.classList.remove('cursor-hidden');
+        }}
+        onMouseLeave={() => {
+          headerHoverRef.current = false;
+          // Reinicia timer ao sair
+          hideUiTimerRef.current = setTimeout(() => {
+            if (tvMode) {
+              setUiVisible(false);
+              document.body.classList.add('cursor-hidden');
+            }
+          }, 4000);
+        }}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center overflow-hidden p-1">
@@ -402,6 +523,14 @@ export default function ClientApp() {
                     <Download className="w-4 h-4" />
                   </a>
                 )}
+                <Link
+                  href="/quadro"
+                  className="btn-secondary"
+                  title="Editar Quadro"
+                >
+                  <LayoutTemplate className="w-4 h-4" />
+                  <span className="hidden sm:inline">Quadro</span>
+                </Link>
               </>
             )}
             <button
@@ -427,24 +556,47 @@ export default function ClientApp() {
         className="flex-1 w-full h-screen relative flex items-center justify-center bg-transparent"
         onDoubleClick={toggleFullscreen}
       >
-        {!pdfUrl && (
-          <div className="text-center animate-enter">
-            <p className="text-gray-400 text-lg mb-4">Nenhum PDF em exibição</p>
-            <button className="btn" onClick={() => setView('uploader')}>
-              Carregar Arquivo
-            </button>
-          </div>
-        )}
+        {/* Render PDF Canvas */}
+        {/* If TV Mode: Show only if phase is 'pdf'. If Normal Mode: Show only if view is 'viewer' */}
+        <div
+          className={`transition-opacity duration-500 absolute inset-0 flex items-center justify-center 
+            ${(tvMode && tvPhase === 'pdf') || (!tvMode && view === 'viewer') ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'}`}
+        >
+          {!pdfUrl && !tvMode && (
+            <div className="text-center animate-enter">
+              <p className="text-gray-400 text-lg mb-4">Nenhum PDF em exibição</p>
+              <button className="btn" onClick={() => setView('uploader')}>
+                Carregar Arquivo
+              </button>
+            </div>
+          )}
 
-        <canvas
-          ref={canvasRef}
-          className={`transition-transform duration-300 ease-out ${tvMode ? 'block' : 'shadow-2xl rounded-sm max-w-[95%] max-h-[90vh]'}`}
-          style={{
-            maxHeight: tvMode ? '100vh' : '85vh',
-            maxWidth: tvMode ? '100vw' : undefined,
-            opacity: pdfUrl ? 1 : 0
-          }}
-        />
+          {(pdfUrl || tvMode) && (
+            <canvas
+              ref={canvasRef}
+              className={`transition-transform duration-300 ease-out ${tvMode ? 'block' : 'shadow-2xl rounded-sm max-w-[95%] max-h-[90vh]'}`}
+              style={{
+                maxHeight: tvMode ? '100vh' : '85vh',
+                maxWidth: tvMode ? '100vw' : undefined,
+              }}
+            />
+          )}
+        </div>
+
+        {/* Render Whiteboard (Only in TV Mode) */}
+        <div
+          className={`absolute inset-0 bg-white transition-opacity duration-500
+             ${(tvMode && tvPhase === 'whiteboard') ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'}`}
+        >
+          {tvPhase === 'whiteboard' && visibleBoards.length > 0 && (
+            <Whiteboard
+              key={visibleBoards[currentBoardIndex]?.id || 'wb'}
+              initialContent={visibleBoards[currentBoardIndex]?.content}
+              readOnly={true}
+            />
+          )}
+        </div>
+
       </div>
 
       {/* Floating Control Bar */}
