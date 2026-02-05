@@ -1,6 +1,7 @@
 'use client';
 
 import { useEditor, EditorContent, Extension } from '@tiptap/react';
+import { mergeAttributes } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
@@ -9,6 +10,7 @@ import FontFamily from '@tiptap/extension-font-family';
 import TextAlign from '@tiptap/extension-text-align';
 import React, { useEffect, useState, useCallback } from 'react';
 import BulletList from '@tiptap/extension-bullet-list';
+import OrderedList from '@tiptap/extension-ordered-list';
 import {
     Bold, Italic, Strikethrough, List, ListOrdered, Star,
     Palette, Highlighter, Undo, Redo, Type,
@@ -21,7 +23,36 @@ const StarList = BulletList.extend({
         return { itemTypeName: 'listItem', keepMarks: true, keepAttributes: true, HTMLAttributes: { class: 'star-list' } };
     },
     parseHTML() { return [{ tag: 'ul.star-list' }]; },
-    renderHTML({ HTMLAttributes }) { return ['ul', this.options.HTMLAttributes, 0]; }
+    renderHTML({ HTMLAttributes }) { return ['ul', this.options.HTMLAttributes, 0]; },
+    addCommands() {
+        return {
+            toggleStarList: () => ({ commands }) => {
+                return commands.toggleList(this.name, this.options.itemTypeName);
+            },
+        };
+    },
+});
+
+const StyledOrderedList = OrderedList.extend({
+    addAttributes() {
+        return {
+            ...this.parent?.(),
+            fontFamily: { default: null },
+            fontSize: { default: null },
+            color: { default: null },
+            fontWeight: { default: null },
+        };
+    },
+    renderHTML({ HTMLAttributes }) {
+        const { fontFamily, fontSize, color, fontWeight, ...rest } = HTMLAttributes;
+        const styles = [];
+        if (fontFamily) styles.push(`font-family: ${fontFamily}`);
+        if (fontSize) styles.push(`font-size: ${fontSize}`);
+        if (color) styles.push(`color: ${color}`);
+        if (fontWeight) styles.push(`font-weight: ${fontWeight}`);
+        const styleAttr = styles.length ? { style: styles.join('; ') } : {};
+        return ['ol', mergeAttributes(this.options.HTMLAttributes, rest, styleAttr), 0];
+    },
 });
 
 
@@ -260,14 +291,27 @@ const MenuBar = ({ editor }) => {
                     <List className="w-5 h-5" />
                 </button>
                 <button
-                    onClick={() => editor.chain().focus().toggleList('starList', 'listItem').run()}
+                    onClick={() => editor.chain().focus().toggleStarList().run()}
                     className={`p-2 rounded-lg transition-colors ${editor.isActive('starList') ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-700'}`}
                     title="Lista com Estrelas"
                 >
                     <Star className="w-5 h-5" />
                 </button>
                 <button
-                    onClick={() => editor.chain().focus().toggleOrderedList().run()}
+                    onClick={() => {
+                        const textStyle = editor.getAttributes('textStyle');
+                        editor
+                            .chain()
+                            .focus()
+                            .toggleOrderedList()
+                            .updateAttributes('orderedList', {
+                                fontFamily: textStyle.fontFamily || null,
+                                fontSize: textStyle.fontSize || null,
+                                color: textStyle.color || null,
+                                fontWeight: editor.isActive('bold') ? '700' : null,
+                            })
+                            .run();
+                    }}
                     className={`p-2 rounded-lg transition-colors ${editor.isActive('orderedList') ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-700'}`}
                     title="Lista Numerada"
                 >
@@ -448,8 +492,10 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
                     }
                 },
                 bulletList: false, // Disable default bulletList to avoid conflicts
+                orderedList: false, // Disable default orderedList to add styled version
             }),
             BulletList, // Explicitly add standard BulletList
+            StyledOrderedList,
             TextStyle,
             FontFamily,
             FontSize,
@@ -496,8 +542,10 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
         extensions: [
             StarterKit.configure({
                 bulletList: false, // Disable default bulletList
+                orderedList: false, // Disable default orderedList to add styled version
             }),
             BulletList, // Explicitly add standard BulletList
+            StyledOrderedList,
             TextStyle,
             FontFamily,
             FontSize,

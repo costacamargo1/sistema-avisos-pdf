@@ -213,12 +213,7 @@ canvas {
   list-style-type: decimal;
   padding-left: 1.5rem;
   margin: 1rem 0;
-  font-family: 'Aptos', 'Montserrat', sans-serif;
-  /* Force markers to use nice font */
-  font-weight: 500;
-  /* Make numbers slightly bolder */
-  color: #374151;
-  /* Gray-700 for better contrast */
+  color: inherit;
 }
 
 .ProseMirror li {

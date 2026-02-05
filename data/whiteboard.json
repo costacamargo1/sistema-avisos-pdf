@@ -9,27 +9,8 @@
           {
             "type": "paragraph",
             "attrs": {
-              "textAlign": "center"
-            },
-            "content": [
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "fontFamily": "Montserrat",
-                      "fontSize": "44px",
-                      "color": "#00358E"
-                    }
-                  },
-                  {
-                    "type": "bold"
-                  }
-                ],
-                "text": "TÍTULO"
-              }
-            ]
+              "textAlign": null
+            }
           }
         ]
       },
