@@ -373,7 +373,7 @@
                     "type": "bold"
                   }
                 ],
-                "text": "TÍTULO"
+                "text": "AÇÕES"
               }
             ]
           }
@@ -386,96 +386,7 @@
             "type": "paragraph",
             "attrs": {
               "textAlign": null
-            },
-            "content": [
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "fontFamily": "Aptos",
-                      "fontSize": "28pt",
-                      "color": "black"
-                    }
-                  },
-                  {
-                    "type": "bold"
-                  }
-                ],
-                "text": "\"Eu disse essas coisas para que em mim vocês tenham paz. Neste mundo vocês terão aflições; contudo, tenham bom ânimo! Eu venci o mundo.\" "
-              }
-            ]
-          },
-          {
-            "type": "paragraph",
-            "attrs": {
-              "textAlign": "left"
-            },
-            "content": [
-              {
-                "type": "hardBreak",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "fontFamily": "Aptos",
-                      "fontSize": "32pt",
-                      "color": "black"
-                    }
-                  },
-                  {
-                    "type": "bold"
-                  }
-                ]
-              },
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "link",
-                    "attrs": {
-                      "href": "https://www.google.com/search?q=Jo%C3%A3o+16%3A33&rlz=1C1GCEA_enBR1059BR1059&oq=VERSICULO+SOBRE+RESILIENCIA&gs_lcrp=EgZjaHJvbWUqBwgAEAAYgAQyBwgAEAAYgAQyCAgBEAAYFhgeMggIAhAAGBYYHjIICAMQABgWGB4yCAgEEAAYFhgeMgoIBRAAGAoYFhgeMgoIBhAAGIAEGKIEMgcIBxAAGO8FMgoICBAAGIAEGKIEMgoICRAAGIAEGKIE0gEIODk1NWowajeoAgCwAgA&sourceid=chrome&ie=UTF-8&ved=2ahUKEwirmNzrsaySAxX0lJUCHTGLD3IQgK4QegYIAQgBEAE",
-                      "target": "_blank",
-                      "rel": "noopener noreferrer nofollow",
-                      "class": null,
-                      "title": null
-                    }
-                  },
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "fontFamily": "Aptos",
-                      "fontSize": "32pt",
-                      "color": "#0164B8"
-                    }
-                  },
-                  {
-                    "type": "bold"
-                  }
-                ],
-                "text": "João 16:33"
-              },
-              {
-                "type": "hardBreak",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "fontFamily": "\"Century Gothic\"",
-                      "fontSize": "20pt",
-                      "color": "red"
-                    }
-                  },
-                  {
-                    "type": "bold"
-                  },
-                  {
-                    "type": "underline"
-                  }
-                ]
-              }
-            ]
+            }
           }
         ]
       }

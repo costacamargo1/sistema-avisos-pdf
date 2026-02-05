@@ -198,9 +198,12 @@ canvas {
 }
 
 .ProseMirror ul {
-  list-style-type: disc;
+  list-style-type: '❖ ';
   padding-left: 1.5rem;
   margin: 1rem 0;
+  font-family: 'Aptos', 'Montserrat', sans-serif;
+  font-weight: bold;
+  /* Make the star slightly bolder/more visible */
 }
 
 .ProseMirror ol {
