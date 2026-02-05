@@ -103,7 +103,54 @@ const FontSize = Extension.create({
     },
 });
 
-const fontSizes = ['10', '11', '12', '16', '18', '20', '24', '40', '44', '48', '64', '80', '88'];
+// Line Height Extension
+const LineHeight = Extension.create({
+    name: 'lineHeight',
+    addOptions() {
+        return {
+            types: ['textStyle'],
+        };
+    },
+    addGlobalAttributes() {
+        return [
+            {
+                types: this.options.types,
+                attributes: {
+                    lineHeight: {
+                        default: null,
+                        parseHTML: element => element.style.lineHeight.replace(/['"]+/g, ''),
+                        renderHTML: attributes => {
+                            if (!attributes.lineHeight) {
+                                return {};
+                            }
+                            return {
+                                style: `line-height: ${attributes.lineHeight}`,
+                            };
+                        },
+                    },
+                },
+            },
+        ];
+    },
+    addCommands() {
+        return {
+            setLineHeight: lineHeight => ({ chain }) => {
+                return chain()
+                    .setMark('textStyle', { lineHeight })
+                    .run();
+            },
+            unsetLineHeight: () => ({ chain }) => {
+                return chain()
+                    .setMark('textStyle', { lineHeight: null })
+                    .removeEmptyTextStyle()
+                    .run();
+            },
+        };
+    },
+});
+
+const fontSizes = ['10', '11', '12', '16', '18', '20', '24', '32', '36', '40', '44', '48', '58', '60', '64', '80', '88'];
+const lineHeights = ['1', '1.15', '1.25', '1.5', '1.75', '2'];
 
 const MenuBar = ({ editor }) => {
     // State to force re-render when editor selection/content changes
@@ -184,6 +231,7 @@ const MenuBar = ({ editor }) => {
     const currentFontSize = editorFontSize ? editorFontSize.replace('px', '') : '';
     const stepFontSize = currentFontSize || lastFontSize || '16';
     const fontSizeNumbers = fontSizes.map(size => parseInt(size, 10));
+    const currentLineHeight = editor.getAttributes('textStyle').lineHeight || '';
 
     const getStepIndex = (value, direction) => {
         const num = parseInt(value, 10);
@@ -276,6 +324,22 @@ const MenuBar = ({ editor }) => {
                     <span className="text-base font-medium">A</span>
                     <span className="text-[10px] align-super">+</span>
                 </button>
+
+                <select
+                    onChange={(e) => {
+                        const val = e.target.value;
+                        if (!val) editor.chain().focus().unsetLineHeight().run();
+                        else editor.chain().focus().setLineHeight(val).run();
+                    }}
+                    value={currentLineHeight}
+                    className="h-9 text-sm border border-gray-300 rounded-lg px-3 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 min-w-[90px] outline-none cursor-pointer"
+                    title="Espaçamento entre linhas"
+                >
+                    <option value="">Linha</option>
+                    {lineHeights.map(size => (
+                        <option key={size} value={size}>{size}x</option>
+                    ))}
+                </select>
             </div>
 
             <div className="flex gap-1 border-r border-gray-200 pr-2 items-center">
@@ -458,8 +522,8 @@ const SmartFormatting = Extension.create({
                 const styleMarks = [
                     state.schema.marks.textStyle.create({
                         fontFamily: 'Aptos',
-                        fontSize: '20px',
-                        color: '#3A5481'
+                        fontSize: '32px',
+                        color: '#00358E'
                     }),
                     state.schema.marks.bold.create()
                 ];
@@ -476,7 +540,7 @@ const SmartFormatting = Extension.create({
                 const nextMarks = [
                     state.schema.marks.textStyle.create({
                         fontFamily: 'Aptos',
-                        fontSize: '20px',
+                        fontSize: '32px',
                         color: '#000000'
                     }),
                     state.schema.marks.bold.create()
@@ -514,7 +578,7 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
                                     type: 'textStyle',
                                     attrs: {
                                         fontFamily: 'Montserrat',
-                                        fontSize: '44px',
+                                        fontSize: '58px',
                                         color: '#00358E'
                                     }
                                 },
@@ -561,6 +625,7 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
             TextStyle,
             FontFamily,
             FontSize,
+            LineHeight,
             Color,
             TextAlign.configure({
                 types: ['heading', 'paragraph'],
@@ -611,6 +676,7 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
             TextStyle,
             FontFamily,
             FontSize,
+            LineHeight,
             Color,
             SmartFormatting,
             Highlight.configure({
@@ -667,9 +733,9 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
         <div className={`flex flex-col h-full bg-gray-100 overflow-hidden ${readOnly ? 'bg-black flex items-center justify-center' : ''}`}>
             {!readOnly && <MenuBar editor={activeEditor || bodyEditor} />}
 
-            <div className={`flex-1 w-full overflow-hidden flex items-center justify-center ${readOnly ? '' : 'p-4 md:p-8'}`}>
+            <div className={`flex-1 w-full overflow-hidden flex items-center justify-center ${readOnly ? '' : 'p-3 md:p-4'}`}>
                 <div
-                    className={`bg-white shadow-2xl transition-all duration-300 w-full relative flex flex-col ${readOnly ? 'h-auto max-h-full max-w-full' : 'max-w-6xl'}`}
+                    className={`bg-white shadow-2xl transition-all duration-300 w-full relative flex flex-col ${readOnly ? 'h-auto max-h-full max-w-full' : 'h-auto max-h-full max-w-full'}`}
                     style={{ aspectRatio: '16/9' }}
                 >
                     {/* Title Section */}

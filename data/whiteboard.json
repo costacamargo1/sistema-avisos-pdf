@@ -1,7 +1,7 @@
 [
   {
-    "id": "4mu49rqru",
-    "title": "Quadro 1",
+    "id": "bw29j2rdf",
+    "title": "Quadro 3",
     "content": {
       "title": {
         "type": "doc",
@@ -9,8 +9,28 @@
           {
             "type": "paragraph",
             "attrs": {
-              "textAlign": null
-            }
+              "textAlign": "center"
+            },
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": "Montserrat",
+                      "fontSize": "58px",
+                      "lineHeight": null,
+                      "color": "#00358E"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "TÍTULO"
+              }
+            ]
           }
         ]
       },
@@ -26,6 +46,396 @@
         ]
       }
     },
-    "isVisible": false
+    "isVisible": true
+  },
+  {
+    "id": "xgjnyjjsi",
+    "title": "Quadro 2",
+    "content": {
+      "title": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "center"
+            },
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": "Montserrat",
+                      "fontSize": "58px",
+                      "lineHeight": null,
+                      "color": "#00358E"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "TÍTULO"
+              }
+            ]
+          }
+        ]
+      },
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "orderedList",
+            "attrs": {
+              "start": 1,
+              "type": null,
+              "fontFamily": "Aptos",
+              "fontSize": "32px",
+              "color": "rgb(0, 53, 142)",
+              "fontWeight": "700"
+            },
+            "content": [
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "32px",
+                              "lineHeight": "1",
+                              "color": "rgb(0, 53, 142)"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "TESTE → "
+                      },
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "32px",
+                              "lineHeight": "1",
+                              "color": "rgb(0, 0, 0)"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "ASDFASDFASDFASDF"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "32px",
+                              "lineHeight": "1",
+                              "color": "rgb(0, 53, 142)"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "ATESASDFAD → ASDFASDFASDF "
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "32px",
+                              "lineHeight": "1",
+                              "color": "rgb(0, 53, 142)"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "A"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "32px",
+                              "lineHeight": "1",
+                              "color": "rgb(0, 53, 142)"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "A"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "32px",
+                              "lineHeight": "1",
+                              "color": "rgb(0, 53, 142)"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "A"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "32px",
+                              "lineHeight": "1",
+                              "color": "rgb(0, 53, 142)"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "A"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "32px",
+                              "lineHeight": "1",
+                              "color": "rgb(0, 53, 142)"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "A"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "32px",
+                              "lineHeight": "1",
+                              "color": "rgb(0, 53, 142)"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "A"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "32px",
+                              "lineHeight": "1",
+                              "color": "rgb(0, 53, 142)"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "A"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "32px",
+                              "lineHeight": "1",
+                              "color": "rgb(0, 53, 142)"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "A"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": null
+            }
+          }
+        ]
+      }
+    },
+    "isVisible": true
   }
 ]
