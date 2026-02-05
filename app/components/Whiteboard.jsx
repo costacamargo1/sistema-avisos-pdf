@@ -8,11 +8,23 @@ import { Highlight } from '@tiptap/extension-highlight';
 import FontFamily from '@tiptap/extension-font-family';
 import TextAlign from '@tiptap/extension-text-align';
 import React, { useEffect, useState, useCallback } from 'react';
+import BulletList from '@tiptap/extension-bullet-list';
 import {
-    Bold, Italic, Strikethrough, List, ListOrdered,
+    Bold, Italic, Strikethrough, List, ListOrdered, Star,
     Palette, Highlighter, Undo, Redo, Type,
     AlignLeft, AlignCenter, AlignRight, AlignJustify
 } from 'lucide-react';
+
+const StarList = BulletList.extend({
+    name: 'starList',
+    addOptions() {
+        return { itemTypeName: 'listItem', keepMarks: true, keepAttributes: true, HTMLAttributes: { class: 'star-list' } };
+    },
+    parseHTML() { return [{ tag: 'ul.star-list' }]; },
+    renderHTML({ HTMLAttributes }) { return ['ul', this.options.HTMLAttributes, 0]; }
+});
+
+
 
 // Custom Font Size Extension
 const FontSize = Extension.create({
@@ -248,6 +260,13 @@ const MenuBar = ({ editor }) => {
                     <List className="w-5 h-5" />
                 </button>
                 <button
+                    onClick={() => editor.chain().focus().toggleList('starList', 'listItem').run()}
+                    className={`p-2 rounded-lg transition-colors ${editor.isActive('starList') ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-700'}`}
+                    title="Lista com Estrelas"
+                >
+                    <Star className="w-5 h-5" />
+                </button>
+                <button
                     onClick={() => editor.chain().focus().toggleOrderedList().run()}
                     className={`p-2 rounded-lg transition-colors ${editor.isActive('orderedList') ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-700'}`}
                     title="Lista Numerada"
@@ -427,8 +446,10 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
                         class: 'title-paragraph',
                         // Remove forced style, let marks/classes handle it
                     }
-                }
+                },
+                bulletList: false, // Disable default bulletList to avoid conflicts
             }),
+            BulletList, // Explicitly add standard BulletList
             TextStyle,
             FontFamily,
             FontSize,
@@ -437,7 +458,9 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
                 types: ['heading', 'paragraph'],
             }),
             Highlight.configure({ multicolor: true }),
+            StarList,
         ],
+
         content: titleContent,
         editable: !readOnly,
         editorProps: {
@@ -471,7 +494,10 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
     const bodyEditor = useEditor({
         immediatelyRender: false,
         extensions: [
-            StarterKit,
+            StarterKit.configure({
+                bulletList: false, // Disable default bulletList
+            }),
+            BulletList, // Explicitly add standard BulletList
             TextStyle,
             FontFamily,
             FontSize,
@@ -483,6 +509,7 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
             TextAlign.configure({
                 types: ['heading', 'paragraph'],
             }),
+            StarList,
         ],
         content: bodyContent,
         onUpdate: ({ editor }) => {
