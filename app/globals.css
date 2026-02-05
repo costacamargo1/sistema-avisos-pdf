@@ -1,5 +1,48 @@
 @import "tailwindcss";
 
+/* Fonts Configuration */
+@font-face {
+  font-family: 'Aptos';
+  src: url('/Fonts/Aptos.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Aptos';
+  src: url('/Fonts/Aptos-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Aptos';
+  src: url('/Fonts/Aptos-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Montserrat';
+  src: url('/Fonts/Montserrat-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Montserrat';
+  src: url('/Fonts/Montserrat-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Montserrat';
+  src: url('/Fonts/Montserrat-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+}
+
 :root {
   /* iOS / Apple-like Palette */
   --bg: #F5F5F7;
@@ -164,6 +207,12 @@ canvas {
   list-style-type: decimal;
   padding-left: 1.5rem;
   margin: 1rem 0;
+  font-family: 'Aptos', 'Montserrat', sans-serif;
+  /* Force markers to use nice font */
+  font-weight: 500;
+  /* Make numbers slightly bolder */
+  color: #374151;
+  /* Gray-700 for better contrast */
 }
 
 .ProseMirror li {

@@ -1,94 +1,133 @@
 [
   {
-    "id": "default",
-    "title": "Avisos Adicionais",
+    "id": "oyzyhepd9",
+    "title": "Quadro 2",
     "content": {
-      "type": "doc",
-      "content": [
-        {
-          "type": "orderedList",
-          "attrs": {
-            "start": 1,
-            "type": null
-          },
-          "content": [
-            {
-              "type": "listItem",
-              "content": [
-                {
-                  "type": "paragraph",
-                  "attrs": {
-                    "textAlign": "center"
-                  },
-                  "content": [
-                    {
-                      "type": "text",
-                      "marks": [
-                        {
-                          "type": "textStyle",
-                          "attrs": {
-                            "fontFamily": "Aptos, 'Segoe UI', sans-serif",
-                            "fontSize": "40px",
-                            "color": "#000000"
-                          }
-                        },
-                        {
-                          "type": "bold"
-                        }
-                      ],
-                      "text": "AÇÕES"
-                    }
-                  ]
-                }
-              ]
+      "title": "AÇÃO",
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "orderedList",
+            "attrs": {
+              "start": 1,
+              "type": null
             },
-            {
-              "type": "listItem",
-              "content": [
-                {
-                  "type": "paragraph",
-                  "attrs": {
-                    "textAlign": "center"
+            "content": [
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": "justify"
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "18px",
+                              "color": "#3A5481"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "TESTE → "
+                      },
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "18px",
+                              "color": "#000000"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "ACAO 1"
+                      }
+                    ]
                   }
-                }
-              ]
-            },
-            {
-              "type": "listItem",
-              "content": [
-                {
-                  "type": "paragraph",
-                  "attrs": {
-                    "textAlign": "center"
-                  },
-                  "content": [
-                    {
-                      "type": "text",
-                      "marks": [
-                        {
-                          "type": "textStyle",
-                          "attrs": {
-                            "fontFamily": "Aptos, 'Segoe UI', sans-serif",
-                            "fontSize": "10px",
-                            "color": "#000000"
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": "justify"
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "18px",
+                              "color": "#000000"
+                            }
                           }
-                        }
-                      ],
-                      "text": "TESTE"
-                    }
-                  ]
-                }
-              ]
+                        ],
+                        "text": "TESTE 2 → ACAO 2 → XXX"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": "justify"
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "marks": [
+                          {
+                            "type": "textStyle",
+                            "attrs": {
+                              "fontFamily": "Aptos",
+                              "fontSize": "20px",
+                              "color": "#3A5481"
+                            }
+                          },
+                          {
+                            "type": "bold"
+                          }
+                        ],
+                        "text": "TESTE 3 → ACAO 3 →  →  →  →  →  →  → "
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": null
             }
-          ]
-        },
-        {
-          "type": "paragraph",
-          "attrs": {
-            "textAlign": "center"
           }
-        }
-      ]
+        ]
+      }
     },
     "isVisible": true
   }

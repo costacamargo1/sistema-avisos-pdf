@@ -76,10 +76,12 @@ const MenuBar = ({ editor }) => {
 
         editor.on('selectionUpdate', handleUpdate);
         editor.on('transaction', handleUpdate);
+        editor.on('update', handleUpdate); // Ensure content updates also trigger
 
         return () => {
             editor.off('selectionUpdate', handleUpdate);
             editor.off('transaction', handleUpdate);
+            editor.off('update', handleUpdate);
         };
     }, [editor]);
 
@@ -88,16 +90,17 @@ const MenuBar = ({ editor }) => {
     // Font family options for matching
     const fontFamilyOptions = [
         { value: 'default', label: 'Fonte Padrão' },
-        { value: "Aptos, 'Segoe UI', sans-serif", label: 'Aptos' },
-        { value: 'Inter, sans-serif', label: 'Inter' },
-        { value: 'Arial, sans-serif', label: 'Arial' },
-        { value: "'Courier New', Courier, monospace", label: 'Courier' },
+        { value: 'Aptos', label: 'Aptos' },
+        { value: 'Montserrat', label: 'Montserrat' },
+        { value: 'Inter', label: 'Inter' },
+        { value: 'Arial', label: 'Arial' },
+        { value: "'Courier New'", label: 'Courier' },
     ];
 
     // Get current font family from editor and find matching option
     const editorFontFamily = editor.getAttributes('textStyle').fontFamily || '';
     const matchedFont = fontFamilyOptions.find(opt =>
-        opt.value !== 'default' && editorFontFamily.includes(opt.label)
+        opt.value !== 'default' && (editorFontFamily.includes(opt.value) || editorFontFamily.includes(opt.label))
     );
     const currentFontFamily = matchedFont ? matchedFont.value : 'default';
 
@@ -307,9 +310,123 @@ const MenuBar = ({ editor }) => {
     );
 };
 
+// Smart Formatting Extension
+const SmartFormatting = Extension.create({
+    name: 'smartFormatting',
+
+    addKeyboardShortcuts() {
+        return {
+            'Tab': () => {
+                const { editor } = this;
+                const { state } = editor.view;
+                const { selection } = state;
+                const { $from } = selection;
+
+                // Get the range from start of paragraph to cursor
+                const from = $from.start();
+                const to = $from.pos;
+
+                // Create a transaction to format the range
+                const tr = state.tr;
+
+                // 1. Apply blue color, font, size, and bold to existing text
+                const styleMarks = [
+                    state.schema.marks.textStyle.create({
+                        fontFamily: 'Aptos',
+                        fontSize: '20px',
+                        color: '#3A5481'
+                    }),
+                    state.schema.marks.bold.create()
+                ];
+
+                // Apply marks to the range
+                styleMarks.forEach(mark => {
+                    tr.addMark(from, to, mark);
+                });
+
+                // 2. Insert the arrow at cursor position
+                tr.insertText(' → ', to);
+
+                // 3. Set stored marks for next typing (black color, keep font/size/bold)
+                const nextMarks = [
+                    state.schema.marks.textStyle.create({
+                        fontFamily: 'Aptos',
+                        fontSize: '20px',
+                        color: '#000000'
+                    }),
+                    state.schema.marks.bold.create()
+                ];
+
+                tr.setStoredMarks(nextMarks);
+
+                // Dispatch the transaction
+                editor.view.dispatch(tr);
+                return true;
+            },
+        };
+    },
+});
+
 export default function Whiteboard({ initialContent, onUpdate, readOnly = false }) {
-    // Initialize Editor
-    const editor = useEditor({
+    // Split initial content into title and body
+    // Handle both legacy (direct content) and new ({title, body}) structures
+    const [titleContent, setTitleContent] = useState(() => {
+        if (initialContent && typeof initialContent === 'object' && initialContent.title) {
+            return initialContent.title;
+        }
+        return 'TÍTULO';
+    });
+
+    const [bodyContent, setBodyContent] = useState(() => {
+        if (initialContent && typeof initialContent === 'object') {
+            if (initialContent.body) return initialContent.body;
+            // If it doesn't have body/title structure but has content, treat as legacy body
+            // But exclude if it looks like the new structure container
+            if (!initialContent.title && !initialContent.body && Object.keys(initialContent).length > 0) {
+                return initialContent;
+            }
+        }
+        return '';
+    });
+
+    // Title Editor - Simple, pre-formatted
+    const titleEditor = useEditor({
+        immediatelyRender: false,
+        extensions: [
+            StarterKit.configure({
+                paragraph: {
+                    HTMLAttributes: {
+                        style: 'text-align: center !important; margin: 0;'
+                    }
+                }
+            }),
+            TextStyle,
+            FontFamily,
+            FontSize,
+            Color,
+        ],
+        content: titleContent,
+        editable: !readOnly,
+        editorProps: {
+            attributes: {
+                class: 'focus:outline-none',
+                style: 'font-family: Montserrat; font-size: 44px; color: #3A5481; font-weight: bold; text-align: center;'
+            },
+        },
+        onUpdate: ({ editor }) => {
+            const content = editor.getText();
+            setTitleContent(content);
+            if (onUpdate) {
+                onUpdate({
+                    title: content,
+                    body: bodyEditor?.getJSON()
+                });
+            }
+        }
+    });
+
+    // Body Editor - Full featured with Smart Tab
+    const bodyEditor = useEditor({
         immediatelyRender: false,
         extensions: [
             StarterKit,
@@ -317,6 +434,7 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
             FontFamily,
             FontSize,
             Color,
+            SmartFormatting,
             Highlight.configure({
                 multicolor: true,
             }),
@@ -324,10 +442,14 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
                 types: ['heading', 'paragraph'],
             }),
         ],
-        content: initialContent,
+        content: bodyContent,
         onUpdate: ({ editor }) => {
+            setBodyContent(editor.getJSON());
             if (onUpdate) {
-                onUpdate(editor.getJSON());
+                onUpdate({
+                    title: titleEditor?.getText() || '',
+                    body: editor.getJSON()
+                });
             }
         },
         editable: !readOnly,
@@ -340,29 +462,45 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
 
     // Handle readOnly prop changes
     useEffect(() => {
-        editor?.setEditable(!readOnly);
-    }, [readOnly, editor]);
+        titleEditor?.setEditable(!readOnly);
+        bodyEditor?.setEditable(!readOnly);
+    }, [readOnly, titleEditor, bodyEditor]);
 
-    if (!editor) return <div className="p-10 text-center text-gray-400">Carregando editor...</div>;
-
-    // Aspect ratio container logic
-    // We want the editor area (canvas) to be 16:9
-    // In edit mode: we show a gray background and the "sheet" in the center
-    // In readOnly: we show it centered with black background (TV style)
+    if (!titleEditor || !bodyEditor) return <div className="p-10 text-center text-gray-400">Carregando editor...</div>;
 
     return (
         <div className={`flex flex-col h-full bg-gray-100 overflow-hidden ${readOnly ? 'bg-black flex items-center justify-center' : ''}`}>
-            {!readOnly && <MenuBar editor={editor} />}
+            {!readOnly && <MenuBar editor={bodyEditor} />}
 
             <div className={`flex-1 w-full overflow-hidden flex items-center justify-center ${readOnly ? '' : 'p-4 md:p-8'}`}>
                 <div
-                    className={`bg-white shadow-2xl transition-all duration-300 w-full relative ${readOnly ? 'h-auto max-h-full max-w-full' : 'max-w-6xl'}`}
+                    className={`bg-white shadow-2xl transition-all duration-300 w-full relative flex flex-col ${readOnly ? 'h-auto max-h-full max-w-full' : 'max-w-6xl'}`}
                     style={{ aspectRatio: '16/9' }}
                 >
-                    <EditorContent
-                        editor={editor}
-                        className="h-full w-full overflow-y-auto"
-                    />
+                    {/* Title Section */}
+                    <div className="border-b-2 border-gray-200 p-6 bg-gray-50">
+                        <EditorContent
+                            editor={titleEditor}
+                            className="w-full"
+                        />
+                    </div>
+
+                    {/* Body Section */}
+                    <div className="flex-1 overflow-y-auto relative z-10">
+                        <EditorContent
+                            editor={bodyEditor}
+                            className="h-full w-full"
+                        />
+                    </div>
+
+                    {/* Watermark Logo */}
+                    <div className="absolute bottom-6 right-8 pointer-events-none select-none z-0 opacity-90">
+                        <img
+                            src="/minilogo.png"
+                            alt="Logo"
+                            className="h-12 w-auto object-contain"
+                        />
+                    </div>
                 </div>
             </div>
         </div>

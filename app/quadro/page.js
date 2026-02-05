@@ -37,9 +37,31 @@ export default function QuadroPage() {
             });
     }, []);
 
-    // Save boards to API
+    const boardsRef = useRef(boards);
+    useEffect(() => {
+        boardsRef.current = boards;
+    }, [boards]);
+
+    // Save on unmount
+    useEffect(() => {
+        return () => {
+            if (boardsRef.current.length > 0) {
+                // Use fetch with keepalive to ensure it completes
+                fetch('/api/whiteboard', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(boardsRef.current),
+                    keepalive: true
+                }).catch(err => console.error("Unmount save failed", err));
+            }
+        };
+    }, []);
+
+    // Save boards to API (debounced)
     const saveBoards = (newBoards) => {
         setBoards(newBoards);
+        // Update ref immediately for safety
+        boardsRef.current = newBoards;
 
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = setTimeout(() => {
