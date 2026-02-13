@@ -1,5 +1,6 @@
 import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
+import { setActivePdfState } from '../_lib/active-pdf';
 
 export async function POST(request) {
   try {
@@ -13,23 +14,27 @@ export async function POST(request) {
     const token = process.env.BLOB_READ_WRITE_TOKEN;
 
     if (!token) {
-      return NextResponse.json({ error: 'TOKEN não configurado.' }, { status: 400 });
+      return NextResponse.json({ error: 'TOKEN nao configurado.' }, { status: 400 });
     }
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Adiciona um sufixo aleatório ao nome do arquivo para evitar conflitos
     const blob = await put(file.name, buffer, {
       access: 'public',
       token,
-      addRandomSuffix: true
+      addRandomSuffix: true,
     });
 
-    console.log('Upload concluído →', blob.url);
+    await setActivePdfState(blob.url, token);
+
     return NextResponse.json({ url: blob.url });
   } catch (error) {
     console.error('Erro completo no upload:', error);
-    return NextResponse.json({ error: error.message || 'Erro interno no upload.' }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || 'Erro interno no upload.' },
+      { status: 500 },
+    );
   }
 }
+

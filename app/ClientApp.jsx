@@ -238,13 +238,8 @@ export default function ClientApp() {
           localStorage.setItem('lastPdfUrl', data.url);
           setTvMode(true);
         } else {
-          const cached = localStorage.getItem('lastPdfUrl');
-          if (cached) {
-            setPdfUrl(cached);
-            setTvMode(true);
-          } else {
-            await startBoardsIfNoPdf();
-          }
+          localStorage.removeItem('lastPdfUrl');
+          await startBoardsIfNoPdf();
         }
       } catch {
         const cached = localStorage.getItem('lastPdfUrl');
@@ -289,7 +284,6 @@ export default function ClientApp() {
         setTotalPages(doc.numPages);
 
         requestAnimationFrame(async () => {
-          // Assume TV mode on first load for better UX if needed, or pass true if we know it defaults to TV
           const s = await fitScaleContain(doc, 1, true);
           setScale(s);
           await renderPage(doc, 1, s);
@@ -297,7 +291,11 @@ export default function ClientApp() {
         });
 
       } catch (err) {
-        console.error('❌ Erro ao carregar PDF:', err);
+        console.error('Erro ao carregar PDF:', err);
+        setPdfDoc(null);
+        setTotalPages(0);
+        setCurrentPage(1);
+        localStorage.removeItem('lastPdfUrl');
       }
     })();
 
@@ -307,7 +305,6 @@ export default function ClientApp() {
   useEffect(() => {
     if (pdfDoc) renderPage(pdfDoc, currentPage, scale);
   }, [scale, pdfDoc, currentPage, renderPage]);
-
   useEffect(() => {
     if (!tvMode || !autoPlay) return;
 
