@@ -8,7 +8,7 @@ import { Color } from '@tiptap/extension-color';
 import { Highlight } from '@tiptap/extension-highlight';
 import FontFamily from '@tiptap/extension-font-family';
 import TextAlign from '@tiptap/extension-text-align';
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import BulletList from '@tiptap/extension-bullet-list';
 import OrderedList from '@tiptap/extension-ordered-list';
 import {
@@ -153,6 +153,21 @@ const fontSizes = ['10', '11', '12', '16', '18', '20', '24', '32', '36', '40', '
 const lineHeights = ['1', '1.15', '1.25', '1.5', '1.75', '2'];
 const presetColors = ['#000000', '#2563EB', '#00358e', '#ff0000', '#16A34A', '#D97706', '#9333EA'];
 const logoLayoutOrder = ['bottom-right-small', 'center-large', 'left-center-medium'];
+const verticalAlignOrder = ['top', 'middle', 'bottom'];
+const verticalAlignMeta = {
+    top: {
+        label: 'Topo',
+        title: 'Alinhar verticalmente ao topo',
+    },
+    middle: {
+        label: 'Meio',
+        title: 'Centralizar verticalmente',
+    },
+    bottom: {
+        label: 'Base',
+        title: 'Alinhar verticalmente na base',
+    },
+};
 const logoLayoutMeta = {
     'bottom-right-small': {
         label: 'Padrão',
@@ -166,7 +181,7 @@ const logoLayoutMeta = {
     },
     'left-center-medium': {
         label: 'Esquerda Grande',
-        containerClass: 'absolute inset-y-0 left-8 pointer-events-none select-none z-0 flex items-center',
+        containerClass: 'absolute inset-0 left-8 pointer-events-none select-none z-0 flex items-center',
         imageClass: 'h-28 w-auto object-contain',
     },
 };
@@ -194,7 +209,7 @@ const normalizeColor = (value) => {
 
 const normalizeFontFamily = (value = '') => value.replace(/['"]/g, '').toLowerCase();
 
-const MenuBar = ({ editor, logoLayout = 'bottom-right-small', onChangeLogoLayout }) => {
+const MenuBar = ({ editor, logoLayout = 'bottom-right-small', onChangeLogoLayout, verticalAlign = 'top', onChangeVerticalAlign }) => {
     const [toolbarState, setToolbarState] = useState({
         fontFamily: 'default',
         fontSize: '',
@@ -317,6 +332,7 @@ const MenuBar = ({ editor, logoLayout = 'bottom-right-small', onChangeLogoLayout
 
     const currentLogoLayout = logoLayoutMeta[logoLayout] ? logoLayout : logoLayoutOrder[0];
     const nextLogoLayout = logoLayoutOrder[(logoLayoutOrder.indexOf(currentLogoLayout) + 1) % logoLayoutOrder.length];
+    const currentVerticalAlign = verticalAlignMeta[verticalAlign] ? verticalAlign : verticalAlignOrder[0];
 
     return (
         <div className="flex flex-wrap gap-2 p-3 bg-white border-b border-gray-200 rounded-t-xl sticky top-0 z-10 items-center">
@@ -545,6 +561,20 @@ const MenuBar = ({ editor, logoLayout = 'bottom-right-small', onChangeLogoLayout
                 </button>
             </div>
 
+            <div className="flex items-center gap-1 border-r border-gray-200 pr-2">
+                <span className="text-[11px] text-gray-500 hidden lg:inline pl-1">Vertical</span>
+                {verticalAlignOrder.map((align) => (
+                    <button
+                        key={align}
+                        onClick={() => onChangeVerticalAlign?.(align)}
+                        className={`h-9 px-2.5 rounded-lg text-xs font-medium transition-colors ${currentVerticalAlign === align ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100 text-gray-700'}`}
+                        title={verticalAlignMeta[align].title}
+                    >
+                        {verticalAlignMeta[align].label}
+                    </button>
+                ))}
+            </div>
+
             <div className="flex items-center border-r border-gray-200 pr-2 mr-1 gap-2">
                 <button
                     onClick={() => onChangeLogoLayout?.(nextLogoLayout)}
@@ -689,8 +719,22 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false,
         const layout = initialContent?.logoLayout;
         return logoLayoutMeta[layout] ? layout : logoLayoutOrder[0];
     });
+    const [verticalAlign, setVerticalAlign] = useState(() => {
+        const align = initialContent?.verticalAlign;
+        return verticalAlignMeta[align] ? align : verticalAlignOrder[0];
+    });
 
     const [activeEditor, setActiveEditor] = useState(null);
+    const logoLayoutRef = useRef(logoLayout);
+    const verticalAlignRef = useRef(verticalAlign);
+
+    useEffect(() => {
+        logoLayoutRef.current = logoLayout;
+    }, [logoLayout]);
+
+    useEffect(() => {
+        verticalAlignRef.current = verticalAlign;
+    }, [verticalAlign]);
 
     // Title Editor - Fully featured but styled as header
     const titleEditor = useEditor({
@@ -741,7 +785,8 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false,
                 onUpdate({
                     title: content,
                     body: bodyEditor?.getJSON(),
-                    logoLayout,
+                    logoLayout: logoLayoutRef.current,
+                    verticalAlign: verticalAlignRef.current,
                 });
             }
         },
@@ -781,14 +826,15 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false,
                 onUpdate({
                     title: titleEditor?.getJSON(),
                     body: editor.getJSON(),
-                    logoLayout,
+                    logoLayout: logoLayoutRef.current,
+                    verticalAlign: verticalAlignRef.current,
                 });
             }
         },
         editable: !readOnly,
         editorProps: {
             attributes: {
-                class: 'prose prose-lg max-w-none focus:outline-none h-full p-8 leading-snug',
+                class: 'whiteboard-body-editor prose prose-lg max-w-none focus:outline-none h-full min-h-full p-8 leading-snug',
             },
             handleDOMEvents: {
                 focus: () => {
@@ -816,11 +862,26 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false,
                 title: titleEditor?.getJSON(),
                 body: bodyEditor?.getJSON(),
                 logoLayout: resolvedLayout,
+                verticalAlign: verticalAlignRef.current,
+            });
+        }
+    };
+
+    const handleChangeVerticalAlign = (nextAlign) => {
+        const resolvedAlign = verticalAlignMeta[nextAlign] ? nextAlign : verticalAlignOrder[0];
+        setVerticalAlign(resolvedAlign);
+        if (onUpdate) {
+            onUpdate({
+                title: titleEditor?.getJSON(),
+                body: bodyEditor?.getJSON(),
+                logoLayout: logoLayoutRef.current,
+                verticalAlign: resolvedAlign,
             });
         }
     };
 
     const logoConfig = logoLayoutMeta[logoLayout] || logoLayoutMeta[logoLayoutOrder[0]];
+    const resolvedVerticalAlign = verticalAlignMeta[verticalAlign] ? verticalAlign : verticalAlignOrder[0];
 
     if (!titleEditor || !bodyEditor) return <div className="p-10 text-center text-gray-400">Carregando editor...</div>;
 
@@ -831,6 +892,8 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false,
                     editor={activeEditor || bodyEditor}
                     logoLayout={logoLayout}
                     onChangeLogoLayout={handleChangeLogoLayout}
+                    verticalAlign={verticalAlign}
+                    onChangeVerticalAlign={handleChangeVerticalAlign}
                 />
             )}
 
@@ -850,12 +913,13 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false,
 
                     {/* Body Section */}
                     <div
-                        className="flex-1 overflow-y-auto relative z-10"
+                        className="whiteboard-body flex flex-1 overflow-y-auto relative z-10"
+                        data-vertical-align={resolvedVerticalAlign}
                         onClick={() => setActiveEditor(bodyEditor)}
                     >
                         <EditorContent
                             editor={bodyEditor}
-                            className="h-full w-full"
+                            className="whiteboard-body-content h-full w-full"
                         />
                     </div>
 
@@ -872,4 +936,3 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false,
         </div>
     );
 }
-

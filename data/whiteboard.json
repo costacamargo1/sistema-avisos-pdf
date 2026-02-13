@@ -21,30 +21,6 @@
             "type": "paragraph",
             "attrs": {
               "textAlign": "right"
-            }
-          },
-          {
-            "type": "paragraph",
-            "attrs": {
-              "textAlign": "right"
-            }
-          },
-          {
-            "type": "paragraph",
-            "attrs": {
-              "textAlign": "right"
-            }
-          },
-          {
-            "type": "paragraph",
-            "attrs": {
-              "textAlign": "right"
-            }
-          },
-          {
-            "type": "paragraph",
-            "attrs": {
-              "textAlign": "right"
             },
             "content": [
               {
@@ -63,7 +39,7 @@
                     "type": "bold"
                   }
                 ],
-                "text": " LICITAÇÃO"
+                "text": "LICITAÇÃO"
               }
             ]
           },
@@ -80,7 +56,7 @@
                     "type": "textStyle",
                     "attrs": {
                       "fontFamily": "Montserrat",
-                      "fontSize": "48px",
+                      "fontSize": "44px",
                       "lineHeight": null,
                       "color": "#00358e"
                     }
@@ -92,12 +68,31 @@
                 "text": "MONITORAMENTO & AÇÕES"
               }
             ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "right"
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "right"
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "right"
+            }
           }
         ]
       },
-      "logoLayout": "left-center-medium"
+      "logoLayout": "left-center-medium",
+      "verticalAlign": "middle"
     },
-    "isVisible": true
+    "isVisible": false
   },
   {
     "id": "4fcye8njj",
@@ -168,7 +163,8 @@
           }
         ]
       },
-      "logoLayout": "bottom-right-small"
+      "logoLayout": "bottom-right-small",
+      "verticalAlign": "top"
     },
     "isVisible": false
   },
@@ -559,7 +555,8 @@
           }
         ]
       },
-      "logoLayout": "bottom-right-small"
+      "logoLayout": "bottom-right-small",
+      "verticalAlign": "top"
     },
     "isVisible": false
   },
@@ -609,7 +606,59 @@
           }
         ]
       },
-      "logoLayout": "bottom-right-small"
+      "logoLayout": "bottom-right-small",
+      "verticalAlign": "top"
+    },
+    "isVisible": true
+  },
+  {
+    "id": "4tu8v3eum",
+    "title": "Quadro 5",
+    "content": {
+      "title": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "center"
+            },
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": "Montserrat",
+                      "fontSize": "58px",
+                      "lineHeight": null,
+                      "color": "#00358E"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "Quadro 5"
+              }
+            ]
+          }
+        ]
+      },
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": null
+            }
+          }
+        ]
+      },
+      "logoLayout": "bottom-right-small",
+      "verticalAlign": "middle"
     },
     "isVisible": true
   }
