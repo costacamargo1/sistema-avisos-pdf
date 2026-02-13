@@ -556,7 +556,7 @@ const SmartFormatting = Extension.create({
     },
 });
 
-export default function Whiteboard({ initialContent, onUpdate, readOnly = false }) {
+export default function Whiteboard({ initialContent, onUpdate, readOnly = false, defaultTitleText = 'TITULO' }) {
     // Split initial content into title and body
     // Handle both legacy (direct content) and new ({title, body}) structures
     const [titleContent, setTitleContent] = useState(() => {
@@ -584,7 +584,7 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
                                 },
                                 { type: 'bold' }
                             ],
-                            text: 'TÍTULO'
+                            text: defaultTitleText
                         }
                     ]
                 }
@@ -713,13 +713,6 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false 
             setActiveEditor(editor);
         }
     });
-
-    // Set default active editor
-    useEffect(() => {
-        if (bodyEditor && !activeEditor) {
-            setActiveEditor(bodyEditor);
-        }
-    }, [bodyEditor, activeEditor]);
 
     // Handle readOnly prop changes
     useEffect(() => {

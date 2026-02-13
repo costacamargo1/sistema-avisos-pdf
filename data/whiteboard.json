@@ -1,7 +1,7 @@
 [
   {
-    "id": "bw29j2rdf",
-    "title": "Quadro 3",
+    "id": "4fcye8njj",
+    "title": "teste3",
     "content": {
       "title": {
         "type": "doc",
@@ -28,7 +28,7 @@
                     "type": "bold"
                   }
                 ],
-                "text": "TÍTULO"
+                "text": "teste3"
               }
             ]
           }
@@ -50,7 +50,7 @@
   },
   {
     "id": "xgjnyjjsi",
-    "title": "Quadro 2",
+    "title": "pagina 2",
     "content": {
       "title": {
         "type": "doc",
@@ -77,7 +77,7 @@
                     "type": "bold"
                   }
                 ],
-                "text": "TÍTULO"
+                "text": "pagina 2"
               }
             ]
           }
@@ -427,6 +427,55 @@
               }
             ]
           },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": null
+            }
+          }
+        ]
+      }
+    },
+    "isVisible": true
+  },
+  {
+    "id": "bw29j2rdf",
+    "title": "página 1",
+    "content": {
+      "title": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "center"
+            },
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": "Montserrat",
+                      "fontSize": "58px",
+                      "lineHeight": null,
+                      "color": "#00358E"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "página 1"
+              }
+            ]
+          }
+        ]
+      },
+      "body": {
+        "type": "doc",
+        "content": [
           {
             "type": "paragraph",
             "attrs": {
