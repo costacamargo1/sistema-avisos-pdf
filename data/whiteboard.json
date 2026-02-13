@@ -21,7 +21,7 @@
                       "fontFamily": "Montserrat",
                       "fontSize": "58px",
                       "lineHeight": null,
-                      "color": "#00358E"
+                      "color": "#ff0000"
                     }
                   },
                   {
@@ -37,6 +37,29 @@
       "body": {
         "type": "doc",
         "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": null
+            },
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": "Montserrat",
+                      "fontSize": "32px",
+                      "lineHeight": "1.25",
+                      "color": "#2563EB"
+                    }
+                  }
+                ],
+                "text": "asdfasdfasdf"
+              }
+            ]
+          },
           {
             "type": "paragraph",
             "attrs": {
@@ -70,7 +93,7 @@
                       "fontFamily": "Montserrat",
                       "fontSize": "58px",
                       "lineHeight": null,
-                      "color": "#00358E"
+                      "color": "#9333EA"
                     }
                   },
                   {

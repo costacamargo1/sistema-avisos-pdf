@@ -151,61 +151,105 @@ const LineHeight = Extension.create({
 
 const fontSizes = ['10', '11', '12', '16', '18', '20', '24', '32', '36', '40', '44', '48', '58', '60', '64', '80', '88'];
 const lineHeights = ['1', '1.15', '1.25', '1.5', '1.75', '2'];
+const presetColors = ['#000000', '#2563EB', '#00358e', '#ff0000', '#16A34A', '#D97706', '#9333EA'];
+
+const getTextStyleAttrFromMarks = (marks, attrName) =>
+    marks?.find(mark => mark.type?.name === 'textStyle' && mark.attrs?.[attrName])?.attrs?.[attrName] || '';
+
+const normalizeColor = (value) => {
+    if (!value || typeof value !== 'string') return '#000000';
+    const color = value.trim().toLowerCase();
+
+    if (/^#[0-9a-f]{6}$/.test(color)) return color;
+    if (/^#[0-9a-f]{3}$/.test(color)) {
+        return `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`;
+    }
+
+    const rgbMatch = color.match(/^rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    if (rgbMatch) {
+        const [r, g, b] = rgbMatch.slice(1, 4).map(n => Math.max(0, Math.min(255, Number(n) || 0)));
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    }
+
+    return color;
+};
+
+const normalizeFontFamily = (value = '') => value.replace(/['"]/g, '').toLowerCase();
 
 const MenuBar = ({ editor }) => {
-    // State to force re-render when editor selection/content changes
-    const [, setUpdateCounter] = useState(0);
+    const [toolbarState, setToolbarState] = useState({
+        fontFamily: 'default',
+        fontSize: '',
+        lineHeight: '',
+        color: '#000000',
+    });
     const [lastFontSize, setLastFontSize] = useState('');
 
-    const resolveFontSize = useCallback(() => {
+    const resolveTextStyleAttr = useCallback((attrName) => {
         if (!editor) return '';
-        const attrSize = editor.getAttributes('textStyle').fontSize;
-        if (attrSize) return attrSize;
-        const getSizeFromMarks = (marks) =>
-            marks?.find(mark => mark.type?.name === 'textStyle' && mark.attrs?.fontSize)?.attrs?.fontSize || '';
-        const storedSize = getSizeFromMarks(editor.state.storedMarks);
-        if (storedSize) return storedSize;
-        const cursorSize = getSizeFromMarks(editor.state.selection?.$from?.marks?.());
-        return cursorSize || '';
+        const attr = editor.getAttributes('textStyle')?.[attrName];
+        const stored = getTextStyleAttrFromMarks(editor.state.storedMarks, attrName);
+        const cursor = getTextStyleAttrFromMarks(editor.state.selection?.$from?.marks?.(), attrName);
+        const selectionEmpty = editor.state.selection?.empty;
+
+        if (selectionEmpty) return stored || attr || cursor || '';
+        return attr || cursor || stored || '';
     }, [editor]);
 
-    const resolveFontSizeForStepping = useCallback(() => {
-        if (!editor) return '';
-        const getSizeFromMarks = (marks) =>
-            marks?.find(mark => mark.type?.name === 'textStyle' && mark.attrs?.fontSize)?.attrs?.fontSize || '';
-        const selectionEmpty = editor.state.selection?.empty;
-        const attrSize = editor.getAttributes('textStyle').fontSize || '';
-        const storedSize = getSizeFromMarks(editor.state.storedMarks);
-        const cursorSize = getSizeFromMarks(editor.state.selection?.$from?.marks?.());
+    const syncToolbarState = useCallback(() => {
+        if (!editor) return;
 
-        if (selectionEmpty) {
-            return storedSize || lastFontSize || attrSize || cursorSize || '';
-        }
-        return attrSize || cursorSize || storedSize || lastFontSize || '';
-    }, [editor, lastFontSize]);
+        const rawFontFamily = resolveTextStyleAttr('fontFamily') || '';
+        const normalizedFamily = normalizeFontFamily(rawFontFamily);
+        const fontFamilyCandidates = ['Aptos', 'Montserrat', 'Inter', 'Arial', "'Courier New'"];
+        const matchedFamily = fontFamilyCandidates.find(opt => normalizedFamily.includes(normalizeFontFamily(opt)));
 
-    // Force re-render when editor state changes
+        const rawFontSize = resolveTextStyleAttr('fontSize') || '';
+        const fontSize = rawFontSize ? rawFontSize.replace('px', '') : '';
+        const lineHeight = resolveTextStyleAttr('lineHeight') || '';
+        const color = normalizeColor(resolveTextStyleAttr('color') || '#000000');
+
+        if (fontSize) setLastFontSize(fontSize);
+
+        setToolbarState(prev => {
+            const next = {
+                fontFamily: matchedFamily || 'default',
+                fontSize,
+                lineHeight,
+                color,
+            };
+            if (
+                prev.fontFamily === next.fontFamily &&
+                prev.fontSize === next.fontSize &&
+                prev.lineHeight === next.lineHeight &&
+                prev.color === next.color
+            ) {
+                return prev;
+            }
+            return next;
+        });
+    }, [editor, resolveTextStyleAttr]);
+
     useEffect(() => {
         if (!editor) return;
 
         const handleUpdate = () => {
-            setUpdateCounter(c => c + 1);
-            const size = resolveFontSizeForStepping() || resolveFontSize();
-            if (size) {
-                setLastFontSize(size.replace('px', ''));
-            }
+            syncToolbarState();
         };
 
         editor.on('selectionUpdate', handleUpdate);
         editor.on('transaction', handleUpdate);
-        editor.on('update', handleUpdate); // Ensure content updates also trigger
+        editor.on('update', handleUpdate);
+        editor.on('focus', handleUpdate);
+        handleUpdate();
 
         return () => {
             editor.off('selectionUpdate', handleUpdate);
             editor.off('transaction', handleUpdate);
             editor.off('update', handleUpdate);
+            editor.off('focus', handleUpdate);
         };
-    }, [editor]);
+    }, [editor, syncToolbarState]);
 
     if (!editor) return null;
 
@@ -219,19 +263,13 @@ const MenuBar = ({ editor }) => {
         { value: "'Courier New'", label: 'Courier' },
     ];
 
-    // Get current font family from editor and find matching option
-    const editorFontFamily = editor.getAttributes('textStyle').fontFamily || '';
-    const matchedFont = fontFamilyOptions.find(opt =>
-        opt.value !== 'default' && (editorFontFamily.includes(opt.value) || editorFontFamily.includes(opt.label))
-    );
-    const currentFontFamily = matchedFont ? matchedFont.value : 'default';
-
-    // Get current font size from editor
-    const editorFontSize = resolveFontSizeForStepping() || resolveFontSize();
-    const currentFontSize = editorFontSize ? editorFontSize.replace('px', '') : '';
+    const currentFontFamily = toolbarState.fontFamily;
+    const currentFontSize = toolbarState.fontSize;
     const stepFontSize = currentFontSize || lastFontSize || '16';
     const fontSizeNumbers = fontSizes.map(size => parseInt(size, 10));
-    const currentLineHeight = editor.getAttributes('textStyle').lineHeight || '';
+    const currentLineHeight = toolbarState.lineHeight;
+    const currentColorNormalized = normalizeColor(toolbarState.color || '#000000');
+    const isPresetColorSelected = presetColors.some(color => normalizeColor(color) === currentColorNormalized);
 
     const getStepIndex = (value, direction) => {
         const num = parseInt(value, 10);
@@ -269,6 +307,7 @@ const MenuBar = ({ editor }) => {
                         const val = e.target.value;
                         if (val === 'default') editor.chain().focus().unsetFontFamily().run();
                         else editor.chain().focus().setFontFamily(val).run();
+                        requestAnimationFrame(syncToolbarState);
                     }}
                     value={currentFontFamily}
                     className="h-9 text-sm border border-gray-300 rounded-lg px-3 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 outline-none min-w-[130px] cursor-pointer"
@@ -285,6 +324,7 @@ const MenuBar = ({ editor }) => {
                     onChange={(e) => {
                         const val = e.target.value;
                         if (val) editor.chain().focus().setFontSize(`${val}px`).run();
+                        requestAnimationFrame(syncToolbarState);
                     }}
                     value={currentFontSize}
                     className="h-9 text-sm border border-gray-300 rounded-lg px-3 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 min-w-20 outline-none cursor-pointer"
@@ -302,6 +342,7 @@ const MenuBar = ({ editor }) => {
                         const nextSize = fontSizes[newIndex];
                         editor.chain().focus().setFontSize(`${nextSize}px`).run();
                         setLastFontSize(nextSize);
+                        requestAnimationFrame(syncToolbarState);
                     }}
                     className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
                     title="Diminuir Fonte"
@@ -317,6 +358,7 @@ const MenuBar = ({ editor }) => {
                         const nextSize = fontSizes[newIndex];
                         editor.chain().focus().setFontSize(`${nextSize}px`).run();
                         setLastFontSize(nextSize);
+                        requestAnimationFrame(syncToolbarState);
                     }}
                     className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
                     title="Aumentar Fonte"
@@ -330,6 +372,7 @@ const MenuBar = ({ editor }) => {
                         const val = e.target.value;
                         if (!val) editor.chain().focus().unsetLineHeight().run();
                         else editor.chain().focus().setLineHeight(val).run();
+                        requestAnimationFrame(syncToolbarState);
                     }}
                     value={currentLineHeight}
                     className="h-9 text-sm border border-gray-300 rounded-lg px-3 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 min-w-[90px] outline-none cursor-pointer"
@@ -344,13 +387,14 @@ const MenuBar = ({ editor }) => {
 
             <div className="flex gap-1 border-r border-gray-200 pr-2 items-center">
                 {/* Preset Colors */}
-                {[
-                    '#000000', '#2563EB', '#DC2626', '#16A34A', '#D97706', '#9333EA'
-                ].map(color => (
+                {presetColors.map(color => (
                     <button
                         key={color}
-                        onClick={() => editor.chain().focus().setColor(color).run()}
-                        className={`w-6 h-6 rounded-full border border-gray-200 hover:scale-110 transition-transform ${editor.getAttributes('textStyle').color === color ? 'ring-2 ring-offset-1 ring-blue-400' : ''}`}
+                        onClick={() => {
+                            editor.chain().focus().setColor(color).run();
+                            requestAnimationFrame(syncToolbarState);
+                        }}
+                        className={`w-6 h-6 rounded-full border border-gray-200 hover:scale-110 transition-transform ${currentColorNormalized === normalizeColor(color) ? 'ring-2 ring-offset-1 ring-blue-400' : ''}`}
                         style={{ backgroundColor: color }}
                         title={color}
                     />
@@ -358,14 +402,17 @@ const MenuBar = ({ editor }) => {
 
                 {/* Custom Picker */}
                 <div className="relative group ml-1">
-                    <label htmlFor="color-picker" className="p-2 rounded-lg hover:bg-gray-100 text-gray-700 cursor-pointer flex items-center justify-center">
+                    <label htmlFor="color-picker" className={`p-2 rounded-lg hover:bg-gray-100 text-gray-700 cursor-pointer flex items-center justify-center ${!isPresetColorSelected ? 'ring-2 ring-offset-1 ring-blue-400' : ''}`}>
                         <Palette className="w-5 h-5" />
                     </label>
                     <input
                         id="color-picker"
                         type="color"
-                        onInput={event => editor.chain().focus().setColor(event.target.value).run()}
-                        value={editor.getAttributes('textStyle').color || '#000000'}
+                        onInput={event => {
+                            editor.chain().focus().setColor(event.target.value).run();
+                            requestAnimationFrame(syncToolbarState);
+                        }}
+                        value={currentColorNormalized}
                         className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
                         title="Cor Personalizada"
                     />
