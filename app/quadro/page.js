@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, Plus, Trash2, Layout, Edit2, GripVertical } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, Layout, Edit2, GripVertical, MessageSquare } from 'lucide-react';
 import Whiteboard from '../components/Whiteboard';
 
 // Simple ID generator if uuid not available
@@ -27,6 +27,7 @@ export default function QuadroPage() {
     const [loading, setLoading] = useState(true);
     const [dragBoardId, setDragBoardId] = useState(null);
     const [dragOverBoardId, setDragOverBoardId] = useState(null);
+    const [messageDayInfo, setMessageDayInfo] = useState(null);
     const dragChangedRef = useRef(false);
     const saveTimeoutRef = useRef(null);
     const titleInputRef = useRef(null);
@@ -37,11 +38,15 @@ export default function QuadroPage() {
             .then(res => res.json())
             .then(data => {
                 if (Array.isArray(data) && data.length > 0) {
-                    setBoards(data);
-                    setSelectedId(data[0].id);
+                    const normalizedBoards = data.map(board => ({
+                        ...board,
+                        messageMode: Boolean(board?.messageMode),
+                    }));
+                    setBoards(normalizedBoards);
+                    setSelectedId(normalizedBoards[0].id);
                 } else {
                     // Should not happen due to API default, but handle empty
-                    const newBoard = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true };
+                    const newBoard = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false };
                     setBoards([newBoard]);
                     setSelectedId(newBoard.id);
                 }
@@ -57,6 +62,34 @@ export default function QuadroPage() {
     useEffect(() => {
         boardsRef.current = boards;
     }, [boards]);
+
+    useEffect(() => {
+        const selectedBoard = boards.find((b) => b.id === selectedId);
+        if (!selectedBoard?.messageMode) {
+            return;
+        }
+
+        let cancelled = false;
+        const loadMessageInfo = async () => {
+            try {
+                const res = await fetch('/api/message-of-day', { cache: 'no-store' });
+                const data = await res.json().catch(() => null);
+                if (!cancelled && data?.message) {
+                    setMessageDayInfo(data);
+                }
+            } catch {
+                // Keep previous info on transient fetch errors.
+            }
+        };
+
+        loadMessageInfo();
+        const timerId = setInterval(loadMessageInfo, 15 * 60 * 1000);
+
+        return () => {
+            cancelled = true;
+            clearInterval(timerId);
+        };
+    }, [boards, selectedId]);
 
     // Save on unmount
     useEffect(() => {
@@ -94,7 +127,8 @@ export default function QuadroPage() {
             id: generateId(),
             title: `Quadro ${boards.length + 1}`,
             content: null,
-            isVisible: true
+            isVisible: true,
+            messageMode: false,
         };
         const updated = [...boards, newBoard];
         saveBoards(updated);
@@ -109,7 +143,7 @@ export default function QuadroPage() {
             const updated = boards.filter(b => b.id !== id);
             if (updated.length === 0) {
                 // Create default if all deleted
-                const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true };
+                const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false };
                 updated.push(def);
             }
             saveBoards(updated);
@@ -124,6 +158,15 @@ export default function QuadroPage() {
         e.stopPropagation();
         const updated = boards.map(b => {
             if (b.id === id) return { ...b, isVisible: !b.isVisible };
+            return b;
+        });
+        saveBoards(updated);
+    };
+
+    const toggleMessageMode = (id, e) => {
+        if (e) e.stopPropagation();
+        const updated = boards.map(b => {
+            if (b.id === id) return { ...b, messageMode: !b.messageMode };
             return b;
         });
         saveBoards(updated);
@@ -282,6 +325,11 @@ export default function QuadroPage() {
                                     <span className={`truncate font-medium transition-colors ${selectedId === board.id ? 'text-blue-900' : 'text-gray-700'}`}>
                                         {board.title}
                                     </span>
+                                    {board.messageMode && (
+                                        <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0 bg-blue-100 text-blue-700">
+                                            Mensagem
+                                        </span>
+                                    )}
                                     {/* Visibility Badge */}
                                     <span className={`ml-auto text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${board.isVisible
                                         ? 'bg-green-100 text-green-700'
@@ -312,6 +360,18 @@ export default function QuadroPage() {
                                     >
                                         <div className={`w-2.5 h-2.5 rounded-full ${board.isVisible ? 'bg-green-500' : 'bg-gray-400'}`} />
                                         <span>{board.isVisible ? 'Ocultar' : 'Mostrar'}</span>
+                                    </button>
+
+                                    {/* Message Mode Toggle */}
+                                    <button
+                                        onClick={(e) => toggleMessageMode(board.id, e)}
+                                        className={`flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-md transition-colors shrink-0 ${board.messageMode
+                                            ? 'text-blue-700 hover:bg-blue-100'
+                                            : 'text-gray-500 hover:bg-gray-200'}`}
+                                        title={board.messageMode ? "Modo mensagem ativo. Clique para desativar." : "Clique para ativar o modo mensagem automatica."}
+                                    >
+                                        <MessageSquare className="w-3.5 h-3.5" />
+                                        <span>{board.messageMode ? 'Mensagem ON' : 'Mensagem OFF'}</span>
                                     </button>
 
                                     {/* Delete Button */}
@@ -346,10 +406,28 @@ export default function QuadroPage() {
                                         saveBoards(updated);
                                     }}
                                     className="text-2xl font-bold bg-transparent border border-transparent hover:border-gray-300 focus:border-blue-500 rounded px-2 py-1 focus:ring-2 focus:ring-blue-100 text-gray-800 placeholder-gray-400 w-full transition-all outline-none"
-                                    placeholder="Título do Quadro"
+                                    placeholder="Titulo do Quadro"
                                 />
+                                <button
+                                    onClick={() => toggleMessageMode(selectedBoard.id)}
+                                    className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${selectedBoard.messageMode
+                                        ? 'text-blue-700 bg-blue-100 border-blue-200 hover:bg-blue-200'
+                                        : 'text-gray-600 bg-white border-gray-300 hover:bg-gray-100'}`}
+                                    title={selectedBoard.messageMode ? 'Desativar modo mensagem neste quadro' : 'Ativar modo mensagem neste quadro'}
+                                >
+                                    <MessageSquare className="w-4 h-4" />
+                                    {selectedBoard.messageMode ? 'Modo Mensagem: ON' : 'Modo Mensagem: OFF'}
+                                </button>
                                 <Edit2 className="w-5 h-5 text-gray-400 opacity-0 group-hover/title:opacity-100 transition-opacity" />
                             </div>
+
+                            {selectedBoard.messageMode && messageDayInfo?.message && (
+                                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs md:text-sm text-blue-900">
+                                    <strong>Hoje:</strong> #{messageDayInfo.message.id} - {messageDayInfo.message.referencia}
+                                    {' | '}
+                                    <strong>{messageDayInfo.nextWeekDay}:</strong> #{messageDayInfo.nextMessage?.id ?? '-'} - {messageDayInfo.nextMessage?.referencia ?? '-'}
+                                </div>
+                            )}
 
                             <div className="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                                 {/* 
@@ -361,7 +439,8 @@ export default function QuadroPage() {
                                     initialContent={selectedBoard.content}
                                     defaultTitleText={selectedBoard.title}
                                     onUpdate={updateBoardContent}
-                                    readOnly={false}
+                                    readOnly={selectedBoard.messageMode}
+                                    messageMode={selectedBoard.messageMode}
                                 />
                             </div>
                         </div>
@@ -375,3 +454,4 @@ export default function QuadroPage() {
         </div>
     );
 }
+

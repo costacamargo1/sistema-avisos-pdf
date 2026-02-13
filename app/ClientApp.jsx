@@ -678,6 +678,7 @@ export default function ClientApp() {
             <Whiteboard
               key={currentBoard.id || `wb-${currentBoardIndex}`}
               initialContent={currentBoard.content}
+              messageMode={Boolean(currentBoard.messageMode)}
               readOnly={true}
             />
           )}

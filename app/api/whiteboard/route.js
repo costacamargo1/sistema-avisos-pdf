@@ -61,7 +61,8 @@ function getDefaultState() {
                 type: 'doc',
                 content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Bem-vindo ao Quadro de Avisos!' }] }]
             },
-            isVisible: true
+            isVisible: true,
+            messageMode: false,
         }
     ];
 }
@@ -99,11 +100,16 @@ export async function GET() {
                     id: 'default',
                     title: 'Quadro Principal (Migrated)',
                     content,
-                    isVisible
+                    isVisible,
+                    messageMode: false,
                 }];
                 return NextResponse.json(migrated);
             }
-            return NextResponse.json(json);
+            const normalized = json.map((board) => ({
+                ...board,
+                messageMode: Boolean(board?.messageMode),
+            }));
+            return NextResponse.json(normalized);
         } catch (error) {
             if (error.code === 'ENOENT') {
                 return NextResponse.json(getDefaultState());
@@ -125,12 +131,17 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Invalid data format: expected array' }, { status: 400 });
         }
 
+        const normalized = content.map((board) => ({
+            ...board,
+            messageMode: Boolean(board?.messageMode),
+        }));
+
         const promises = [];
 
         // 1. Write to Upstash Redis
         if (redis) {
             promises.push(
-                redis.set('whiteboard_data', content)
+                redis.set('whiteboard_data', normalized)
                     .catch(() => { /* Ignore Redis errors in dev if partially configured */ })
             );
         }
@@ -140,7 +151,7 @@ export async function POST(request) {
             (async () => {
                 try {
                     await ensureDir();
-                    await fs.writeFile(FILE_PATH, JSON.stringify(content, null, 2), 'utf-8');
+                    await fs.writeFile(FILE_PATH, JSON.stringify(normalized, null, 2), 'utf-8');
                 } catch (e) {
                     console.error("Local save failed", e);
                 }

@@ -186,6 +186,21 @@ const logoLayoutMeta = {
     },
 };
 
+const defaultMessagePayload = {
+    message: {
+        id: 1,
+        mensagem: 'Tenho-vos dito isto, para que em mim tenhais paz; no mundo tereis aflicoes, mas tende bom animo, eu venci o mundo.',
+        referencia: 'Joao 16:33',
+    },
+    nextMessage: {
+        id: 2,
+        mensagem: 'O Senhor e o meu pastor; nada me faltara.',
+        referencia: 'Salmos 23:1',
+    },
+    weekDay: 'Hoje',
+    nextWeekDay: 'Proximo dia util',
+};
+
 const getTextStyleAttrFromMarks = (marks, attrName) =>
     marks?.find(mark => mark.type?.name === 'textStyle' && mark.attrs?.[attrName])?.attrs?.[attrName] || '';
 
@@ -667,7 +682,7 @@ const SmartFormatting = Extension.create({
     },
 });
 
-export default function Whiteboard({ initialContent, onUpdate, readOnly = false, defaultTitleText = 'TITULO' }) {
+export default function Whiteboard({ initialContent, onUpdate, readOnly = false, defaultTitleText = 'TITULO', messageMode = false }) {
     // Split initial content into title and body
     // Handle both legacy (direct content) and new ({title, body}) structures
     const [titleContent, setTitleContent] = useState(() => {
@@ -725,6 +740,7 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false,
     });
 
     const [activeEditor, setActiveEditor] = useState(null);
+    const [messagePayload, setMessagePayload] = useState(defaultMessagePayload);
     const logoLayoutRef = useRef(logoLayout);
     const verticalAlignRef = useRef(verticalAlign);
 
@@ -735,6 +751,36 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false,
     useEffect(() => {
         verticalAlignRef.current = verticalAlign;
     }, [verticalAlign]);
+
+    useEffect(() => {
+        if (!messageMode) return;
+
+        let cancelled = false;
+        const fetchMessage = async () => {
+            try {
+                const res = await fetch('/api/message-of-day', { cache: 'no-store' });
+                const data = await res.json().catch(() => null);
+                if (!cancelled && data?.message) {
+                    setMessagePayload({
+                        message: data.message,
+                        nextMessage: data.nextMessage || null,
+                        weekDay: data.weekDay || 'Hoje',
+                        nextWeekDay: data.nextWeekDay || 'Proximo dia util',
+                    });
+                }
+            } catch {
+                // Keep fallback payload.
+            }
+        };
+
+        fetchMessage();
+        const timerId = setInterval(fetchMessage, 15 * 60 * 1000);
+
+        return () => {
+            cancelled = true;
+            clearInterval(timerId);
+        };
+    }, [messageMode]);
 
     // Title Editor - Fully featured but styled as header
     const titleEditor = useEditor({
@@ -882,6 +928,42 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false,
 
     const logoConfig = logoLayoutMeta[logoLayout] || logoLayoutMeta[logoLayoutOrder[0]];
     const resolvedVerticalAlign = verticalAlignMeta[verticalAlign] ? verticalAlign : verticalAlignOrder[0];
+
+    if (messageMode) {
+        const todayMessage = messagePayload?.message || defaultMessagePayload.message;
+
+        return (
+            <div className="flex flex-col h-full bg-black overflow-hidden">
+                <div className="flex-1 w-full overflow-hidden flex items-center justify-center">
+                    <div
+                        className="w-full h-auto max-h-full max-w-full bg-[#ececec] shadow-2xl relative flex flex-col"
+                        style={{ aspectRatio: '16/9' }}
+                    >
+                        <div className="h-[14%] min-h-[68px] border-b border-gray-300 bg-[#e3e3e3]" />
+
+                        <div className="flex-1 grid grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] gap-6 px-8 md:px-12 py-8 md:py-10">
+                            <div className="flex items-center justify-center md:justify-start">
+                                <img
+                                    src="/logogrande.png"
+                                    alt="Logo"
+                                    className="w-full max-w-[420px] h-auto object-contain"
+                                />
+                            </div>
+
+                            <div className="flex flex-col justify-center items-end">
+                                <p className="text-right font-bold text-black leading-tight text-[clamp(22px,3.2vw,50px)] max-w-[26ch]">
+                                    &quot;{todayMessage?.mensagem}&quot;
+                                </p>
+                                <p className="mt-8 text-right font-bold text-[#005CB9] leading-none text-[clamp(28px,2.8vw,48px)]">
+                                    {todayMessage?.referencia}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (!titleEditor || !bodyEditor) return <div className="p-10 text-center text-gray-400">Carregando editor...</div>;
 

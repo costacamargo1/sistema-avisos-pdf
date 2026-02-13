@@ -118,7 +118,8 @@
       "logoLayout": "left-center-medium",
       "verticalAlign": "middle"
     },
-    "isVisible": true
+    "isVisible": true,
+    "messageMode": false
   },
   {
     "id": "4fcye8njj",
@@ -192,7 +193,8 @@
       "logoLayout": "bottom-right-small",
       "verticalAlign": "top"
     },
-    "isVisible": false
+    "isVisible": false,
+    "messageMode": false
   },
   {
     "id": "xgjnyjjsi",
@@ -584,7 +586,8 @@
       "logoLayout": "bottom-right-small",
       "verticalAlign": "top"
     },
-    "isVisible": false
+    "isVisible": false,
+    "messageMode": false
   },
   {
     "id": "p7bz35vt3",
@@ -635,7 +638,8 @@
       "logoLayout": "bottom-right-small",
       "verticalAlign": "top"
     },
-    "isVisible": false
+    "isVisible": false,
+    "messageMode": false
   },
   {
     "id": "4tu8v3eum",
@@ -686,6 +690,7 @@
       "logoLayout": "bottom-right-small",
       "verticalAlign": "middle"
     },
-    "isVisible": false
+    "isVisible": false,
+    "messageMode": true
   }
 ]
