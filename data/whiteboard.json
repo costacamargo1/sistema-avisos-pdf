@@ -30,7 +30,7 @@
                     "type": "textStyle",
                     "attrs": {
                       "fontFamily": "Montserrat",
-                      "fontSize": "80px",
+                      "fontSize": "88px",
                       "lineHeight": null,
                       "color": "#00358e"
                     }
@@ -56,7 +56,7 @@
                     "type": "textStyle",
                     "attrs": {
                       "fontFamily": "Montserrat",
-                      "fontSize": "44px",
+                      "fontSize": "48px",
                       "lineHeight": null,
                       "color": "#00358e"
                     }
@@ -65,7 +65,33 @@
                     "type": "bold"
                   }
                 ],
-                "text": "MONITORAMENTO & AÇÕES"
+                "text": "MONITORAMENTO "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "right"
+            },
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": "Montserrat",
+                      "fontSize": "48px",
+                      "lineHeight": null,
+                      "color": "#00358e"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "   & AÇÕES          "
               }
             ]
           },
@@ -92,7 +118,7 @@
       "logoLayout": "left-center-medium",
       "verticalAlign": "middle"
     },
-    "isVisible": false
+    "isVisible": true
   },
   {
     "id": "4fcye8njj",
@@ -609,7 +635,7 @@
       "logoLayout": "bottom-right-small",
       "verticalAlign": "top"
     },
-    "isVisible": true
+    "isVisible": false
   },
   {
     "id": "4tu8v3eum",
@@ -660,6 +686,6 @@
       "logoLayout": "bottom-right-small",
       "verticalAlign": "middle"
     },
-    "isVisible": true
+    "isVisible": false
   }
 ]

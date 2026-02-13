@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   Upload, Maximize2, Play, Pause,
-  ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, Monitor, X,
+  ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, Trash2, Monitor, X,
   LayoutTemplate, Settings
 } from 'lucide-react';
 import Link from 'next/link';
@@ -22,6 +22,7 @@ export default function ClientApp() {
   const [totalPages, setTotalPages] = useState(0);
   const [scale, setScale] = useState(1.0);
   const [isUploading, setIsUploading] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   const [autoPlay, setAutoPlay] = useState(false);
   const [autoMs, setAutoMs] = useState(8000); // 8 segundos padrão
@@ -166,6 +167,56 @@ export default function ClientApp() {
       setIsUploading(false);
     }
   }, [file]);
+
+  const clearPdfState = useCallback(() => {
+    if (pdfUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(pdfUrl);
+    }
+
+    setPdfUrl(null);
+    setPdfDoc(null);
+    setCurrentPage(1);
+    setTotalPages(0);
+    setScale(1);
+    setAutoPlay(false);
+    setTvMode(false);
+    setTvPhase('pdf');
+    setVisibleBoards([]);
+    setCurrentBoardIndex(0);
+    setFile(null);
+    localStorage.removeItem('lastPdfUrl');
+  }, [pdfUrl]);
+
+  const handleRemovePdf = useCallback(async () => {
+    if (!pdfUrl && !pdfDoc) return;
+
+    const confirmed = window.confirm('Deseja remover o PDF atual?');
+    if (!confirmed) return;
+
+    setIsRemoving(true);
+    try {
+      const isRemotePdf = typeof pdfUrl === 'string' && /^https?:\/\//i.test(pdfUrl);
+      if (isRemotePdf) {
+        const res = await fetch('/api/delete-pdf', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: pdfUrl }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data?.error || 'Falha ao remover o PDF.');
+        }
+      }
+
+      clearPdfState();
+      alert('PDF removido com sucesso.');
+    } catch (err) {
+      console.error('Erro ao remover PDF:', err);
+      alert('Erro ao remover PDF: ' + (err.message || 'desconhecido'));
+    } finally {
+      setIsRemoving(false);
+    }
+  }, [pdfUrl, pdfDoc, clearPdfState]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -545,6 +596,17 @@ export default function ClientApp() {
                 <button className="btn-secondary" onClick={() => setView('uploader')}>
                   <Upload className="w-4 h-4" /> <span className="hidden sm:inline">Trocar PDF</span>
                 </button>
+                {hasPdf && (
+                  <button
+                    className="btn-secondary text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-60"
+                    onClick={handleRemovePdf}
+                    disabled={isRemoving}
+                    title="Remover PDF"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span className="hidden sm:inline">{isRemoving ? 'Removendo...' : 'Remover PDF'}</span>
+                  </button>
+                )}
                 {pdfUrl && (
                   <a className="btn-secondary" href={pdfUrl} target="_blank" rel="noreferrer">
                     <Download className="w-4 h-4" />
