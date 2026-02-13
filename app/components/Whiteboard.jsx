@@ -287,7 +287,7 @@ const MenuBar = ({ editor }) => {
                         if (val) editor.chain().focus().setFontSize(`${val}px`).run();
                     }}
                     value={currentFontSize}
-                    className="h-9 text-sm border border-gray-300 rounded-lg px-3 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 min-w-[80px] outline-none cursor-pointer"
+                    className="h-9 text-sm border border-gray-300 rounded-lg px-3 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 min-w-20 outline-none cursor-pointer"
                 >
                     <option value="">Tamanho</option>
                     {fontSizes.map(size => (

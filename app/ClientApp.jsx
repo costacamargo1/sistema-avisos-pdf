@@ -38,6 +38,7 @@ export default function ClientApp() {
 
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
+  const currentBoard = visibleBoards[currentBoardIndex] || visibleBoards[0] || null;
 
   const fitScaleContain = async (doc, pageNum, isTv = false) => {
     const container = viewerRef.current;
@@ -97,6 +98,30 @@ export default function ClientApp() {
     setCurrentPage(page);
     await renderPage(pdfDoc, page, scale);
   }, [pdfDoc, totalPages, scale, renderPage]);
+
+  const fetchVisibleBoards = useCallback(async () => {
+    try {
+      const res = await fetch('/api/whiteboard');
+      const data = await res.json();
+      const boards = Array.isArray(data)
+        ? data
+        : (data.content ? [{ ...data, isVisible: data.isVisible ?? true }] : []);
+      return boards.filter(board => board?.isVisible !== false);
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const startBoardsIfNoPdf = useCallback(async () => {
+    const activeBoards = await fetchVisibleBoards();
+    if (activeBoards.length === 0) return false;
+
+    setVisibleBoards(activeBoards);
+    setCurrentBoardIndex(0);
+    setTvPhase('whiteboard');
+    setTvMode(true);
+    return true;
+  }, [fetchVisibleBoards]);
 
   const toggleFullscreen = useCallback(() => {
     const el = document.documentElement;
@@ -166,6 +191,8 @@ export default function ClientApp() {
           if (cached) {
             setPdfUrl(cached);
             setTvMode(true);
+          } else {
+            await startBoardsIfNoPdf();
           }
         }
       } catch {
@@ -173,10 +200,12 @@ export default function ClientApp() {
         if (cached) {
           setPdfUrl(cached);
           setTvMode(true);
+        } else {
+          await startBoardsIfNoPdf();
         }
       }
     })();
-  }, []);
+  }, [startBoardsIfNoPdf]);
 
   useEffect(() => {
     const q = searchParams.get('tv');
@@ -236,10 +265,7 @@ export default function ClientApp() {
         if (!pdfDoc || totalPages === 0) {
           // If no PDF, check for boards immediately
           try {
-            const res = await fetch('/api/whiteboard');
-            const data = await res.json();
-            const boards = Array.isArray(data) ? data : (data.content ? [{ ...data, isVisible: data.isVisible ?? true }] : []);
-            const active = boards.filter(b => b.isVisible);
+            const active = await fetchVisibleBoards();
 
             if (active.length > 0) {
               setVisibleBoards(active);
@@ -252,47 +278,39 @@ export default function ClientApp() {
 
         // Logic to advance pages
         if (currentPage < totalPages) {
-          setCurrentPage(p => p + 1);
+          await goTo(currentPage + 1);
         } else {
           // Finished PDF, check for boards
           try {
-            const res = await fetch('/api/whiteboard');
-            const data = await res.json();
-            const boards = Array.isArray(data) ? data : (data.content ? [{ ...data, isVisible: data.isVisible ?? true }] : []);
-            const active = boards.filter(b => b.isVisible);
+            const active = await fetchVisibleBoards();
 
             if (active.length > 0) {
               setVisibleBoards(active);
               setCurrentBoardIndex(0);
               setTvPhase('whiteboard');
             } else {
-              setCurrentPage(1); // Loop PDF
+              await goTo(1); // Loop PDF
             }
           } catch (e) {
-            setCurrentPage(1);
+            await goTo(1);
           }
         }
       } else if (tvPhase === 'whiteboard') {
-        const fetchBoards = async () => {
-          try {
-            const res = await fetch('/api/whiteboard');
-            const data = await res.json();
-            const boards = Array.isArray(data) ? data : (data.content ? [{ ...data, isVisible: data.isVisible ?? true }] : []);
-            return boards.filter(b => b.isVisible);
-          } catch { return []; }
-        };
-
         // If we are at the end of boards list
         // We need to check if valid boards still exist
-        const activeBoards = await fetchBoards();
+        const activeBoards = await fetchVisibleBoards();
+        setVisibleBoards(activeBoards);
 
         if (activeBoards.length === 0) {
           // No boards visible
           if (pdfDoc) {
             setTvPhase('pdf');
-            setCurrentPage(1);
+            setCurrentBoardIndex(0);
+            await goTo(1);
           }
           // If no PDF and no boards, do nothing (wait)
+        } else if (currentBoardIndex >= activeBoards.length) {
+          setCurrentBoardIndex(0);
         } else if (currentBoardIndex < activeBoards.length - 1) {
           // Move to next board
           setCurrentBoardIndex(i => i + 1);
@@ -302,13 +320,11 @@ export default function ClientApp() {
             // Include refresh check? 
             // For now, back to PDF
             setTvPhase('pdf');
-            setCurrentPage(1);
             setCurrentBoardIndex(0);
+            await goTo(1);
           } else {
             // No PDF, Loop boards
             setCurrentBoardIndex(0);
-            // Verify if visibleBoards needs update 
-            setVisibleBoards(activeBoards);
           }
         }
       }
@@ -317,7 +333,15 @@ export default function ClientApp() {
     const intervalTime = tvPhase === 'whiteboard' ? wbDuration : autoMs;
     const id = setInterval(runLoop, intervalTime);
     return () => clearInterval(id);
-  }, [tvMode, autoPlay, tvPhase, currentPage, totalPages, pdfDoc, wbDuration, autoMs, currentBoardIndex]);
+  }, [tvMode, autoPlay, tvPhase, currentPage, totalPages, pdfDoc, wbDuration, autoMs, currentBoardIndex, goTo, fetchVisibleBoards]);
+
+  useEffect(() => {
+    if (tvPhase !== 'whiteboard') return;
+    if (visibleBoards.length === 0) return;
+    if (currentBoardIndex >= visibleBoards.length) {
+      setCurrentBoardIndex(0);
+    }
+  }, [tvPhase, visibleBoards, currentBoardIndex]);
 
   // Efeito para redimensionamento e renderização ao mudar página ou entrar em TV mode
   useEffect(() => {
@@ -588,10 +612,10 @@ export default function ClientApp() {
           className={`absolute inset-0 bg-white transition-opacity duration-500
              ${(tvMode && tvPhase === 'whiteboard') ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'}`}
         >
-          {tvPhase === 'whiteboard' && visibleBoards.length > 0 && (
+          {tvPhase === 'whiteboard' && currentBoard && (
             <Whiteboard
-              key={visibleBoards[currentBoardIndex]?.id || 'wb'}
-              initialContent={visibleBoards[currentBoardIndex]?.content}
+              key={currentBoard.id || `wb-${currentBoardIndex}`}
+              initialContent={currentBoard.content}
               readOnly={true}
             />
           )}
