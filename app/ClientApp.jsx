@@ -27,7 +27,7 @@ export default function ClientApp() {
   const [autoMs, setAutoMs] = useState(8000); // 8 segundos padrão
 
   const [wbEnabled, setWbEnabled] = useState(true);
-  const [wbDuration, setWbDuration] = useState(15000); // 15s no quadro
+  const [wbDuration, setWbDuration] = useState(8000); // 8s no quadro
   const [tvPhase, setTvPhase] = useState('pdf'); // 'pdf' | 'whiteboard'
   const [currentBoardIndex, setCurrentBoardIndex] = useState(0);
   const [visibleBoards, setVisibleBoards] = useState([]);
@@ -448,6 +448,9 @@ export default function ClientApp() {
   }, [pdfDoc, currentPage, goTo, toggleFullscreen]);
 
   const topBarHidden = tvMode && !uiVisible;
+  const hasPdf = Boolean(pdfUrl || pdfDoc);
+  const showControlBar = hasPdf || (tvMode && Boolean(currentBoard));
+  const intervalValue = tvPhase === 'whiteboard' ? wbDuration : autoMs;
   const headerHoverRef = useRef(false);
 
   // --- UI Components ---
@@ -624,25 +627,27 @@ export default function ClientApp() {
       </div>
 
       {/* Floating Control Bar */}
-      {pdfUrl && (
+      {showControlBar && (
         <div className={`absolute bottom-8 left-1/2 -translate-x-1/2 z-20 ui-fade ${topBarHidden ? 'ui-hidden' : ''}`}>
           <div className="bg-white/90 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl p-2 flex items-center gap-1 transition-all hover:scale-105 hover:bg-white">
 
             {/* Page Nav */}
-            <div className="flex items-center gap-1 pr-2 border-r border-gray-200">
-              <button className="btn-ghost p-2 rounded-xl" onClick={() => goTo(currentPage - 1)}>
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <span className="text-xs font-medium font-mono min-w-12 text-center text-gray-600">
-                {currentPage} / {totalPages || '-'}
-              </span>
-              <button className="btn-ghost p-2 rounded-xl" onClick={() => goTo(currentPage + 1)}>
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
+            {hasPdf && (
+              <div className="flex items-center gap-1 pr-2 border-r border-gray-200">
+                <button className="btn-ghost p-2 rounded-xl" onClick={() => goTo(currentPage - 1)}>
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <span className="text-xs font-medium font-mono min-w-12 text-center text-gray-600">
+                  {currentPage} / {totalPages || '-'}
+                </span>
+                <button className="btn-ghost p-2 rounded-xl" onClick={() => goTo(currentPage + 1)}>
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            )}
 
             {/* Playback */}
-            <div className="flex items-center gap-1 px-2 border-r border-gray-200">
+            <div className={`flex items-center gap-1 px-2 ${hasPdf ? 'border-r border-gray-200' : ''}`}>
               <button
                 className={`p-2 rounded-xl transition-colors ${autoPlay ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100 text-gray-700'}`}
                 onClick={() => setAutoPlay(a => !a)}
@@ -653,8 +658,15 @@ export default function ClientApp() {
 
               <select
                 className="bg-transparent border-none text-xs font-medium text-gray-600 focus:ring-0 cursor-pointer py-1 pr-6"
-                value={autoMs}
-                onChange={(e) => setAutoMs(Number(e.target.value))}
+                value={intervalValue}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (tvPhase === 'whiteboard') {
+                    setWbDuration(value);
+                  } else {
+                    setAutoMs(value);
+                  }
+                }}
               >
                 <option value={5000}>5s</option>
                 <option value={8000}>8s</option>
@@ -665,12 +677,16 @@ export default function ClientApp() {
 
             {/* Zoom & Screen */}
             <div className="flex items-center gap-1 pl-2">
-              <button className="btn-ghost p-2 rounded-xl" onClick={() => setScale(s => Math.max(0.5, s - 0.1))}>
-                <ZoomOut className="w-4 h-4" />
-              </button>
-              <button className="btn-ghost p-2 rounded-xl" onClick={() => setScale(s => Math.min(3, s + 0.1))}>
-                <ZoomIn className="w-4 h-4" />
-              </button>
+              {hasPdf && (
+                <>
+                  <button className="btn-ghost p-2 rounded-xl" onClick={() => setScale(s => Math.max(0.5, s - 0.1))}>
+                    <ZoomOut className="w-4 h-4" />
+                  </button>
+                  <button className="btn-ghost p-2 rounded-xl" onClick={() => setScale(s => Math.min(3, s + 0.1))}>
+                    <ZoomIn className="w-4 h-4" />
+                  </button>
+                </>
+              )}
               <button className="btn-ghost p-2 rounded-xl ml-1" onClick={toggleFullscreen}>
                 <Maximize2 className="w-4 h-4" />
               </button>

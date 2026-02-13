@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, Plus, Trash2, Layout, Edit2, ArrowUp, ArrowDown } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, Layout, Edit2, GripVertical } from 'lucide-react';
 import Whiteboard from '../components/Whiteboard';
 
 // Simple ID generator if uuid not available
@@ -25,6 +25,9 @@ export default function QuadroPage() {
     const [boards, setBoards] = useState([]);
     const [selectedId, setSelectedId] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [dragBoardId, setDragBoardId] = useState(null);
+    const [dragOverBoardId, setDragOverBoardId] = useState(null);
+    const dragChangedRef = useRef(false);
     const saveTimeoutRef = useRef(null);
     const titleInputRef = useRef(null);
 
@@ -132,19 +135,67 @@ export default function QuadroPage() {
         setTimeout(() => titleInputRef.current?.focus(), 100);
     };
 
-    const moveBoard = (id, direction, e) => {
-        e.stopPropagation();
+    const resetDragState = () => {
+        setDragBoardId(null);
+        setDragOverBoardId(null);
+        dragChangedRef.current = false;
+    };
 
-        const currentIndex = boards.findIndex(board => board.id === id);
-        if (currentIndex === -1) return;
+    const handleBoardDragStart = (boardId, e) => {
+        setDragBoardId(boardId);
+        setDragOverBoardId(boardId);
+        dragChangedRef.current = false;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', boardId);
+    };
 
-        const targetIndex = currentIndex + direction;
-        if (targetIndex < 0 || targetIndex >= boards.length) return;
+    const reorderBoardsPreview = (sourceId, targetId, placeAfter = false) => {
+        if (!sourceId || !targetId || sourceId === targetId) return;
 
-        const updated = [...boards];
-        const [moved] = updated.splice(currentIndex, 1);
-        updated.splice(targetIndex, 0, moved);
-        saveBoards(updated);
+        setBoards(prevBoards => {
+            const sourceIndex = prevBoards.findIndex(board => board.id === sourceId);
+            const targetIndex = prevBoards.findIndex(board => board.id === targetId);
+            if (sourceIndex === -1 || targetIndex === -1) return prevBoards;
+
+            let destinationIndex = targetIndex + (placeAfter ? 1 : 0);
+            if (sourceIndex < destinationIndex) destinationIndex -= 1;
+            destinationIndex = Math.max(0, Math.min(destinationIndex, prevBoards.length - 1));
+            if (sourceIndex === destinationIndex) return prevBoards;
+
+            const updated = [...prevBoards];
+            const [moved] = updated.splice(sourceIndex, 1);
+            updated.splice(destinationIndex, 0, moved);
+            boardsRef.current = updated;
+            dragChangedRef.current = true;
+            return updated;
+        });
+    };
+
+    const handleBoardDragOver = (boardId, e) => {
+        if (!dragBoardId) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (dragBoardId === boardId) return;
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const placeAfter = e.clientY > rect.top + rect.height / 2;
+        setDragOverBoardId(boardId);
+        reorderBoardsPreview(dragBoardId, boardId, placeAfter);
+    };
+
+    const handleBoardDrop = (e) => {
+        e.preventDefault();
+        if (dragChangedRef.current) {
+            saveBoards([...boardsRef.current]);
+        }
+        resetDragState();
+    };
+
+    const handleBoardDragEnd = () => {
+        if (dragChangedRef.current) {
+            saveBoards([...boardsRef.current]);
+        }
+        resetDragState();
     };
 
     const updateBoardContent = (content) => {
@@ -194,17 +245,36 @@ export default function QuadroPage() {
                             <Plus className="w-4 h-4" /> Novo Quadro
                         </button>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                    <div className={`flex-1 overflow-y-auto p-2 space-y-1 select-none ${dragBoardId ? 'cursor-grabbing' : ''}`}>
                         {boards.map((board, index) => (
                             <div
                                 key={board.id}
                                 onClick={() => setSelectedId(board.id)}
+                                onDragOver={(e) => handleBoardDragOver(board.id, e)}
+                                onDrop={handleBoardDrop}
                                 className={`group flex flex-col p-3 rounded-lg cursor-pointer transition-all duration-200 ${selectedId === board.id
                                     ? 'bg-blue-50 border-blue-300 border shadow-sm'
-                                    : 'hover:bg-gray-100 border border-transparent hover:border-gray-200'}`}
+                                    : 'hover:bg-gray-100 border border-transparent hover:border-gray-200'}
+                                    ${dragBoardId === board.id ? 'opacity-60' : ''}
+                                    ${dragOverBoardId === board.id && dragBoardId !== board.id ? 'ring-2 ring-blue-300' : ''}
+                                    select-none`}
                             >
                                 {/* Board Info Row */}
                                 <div className="flex items-center gap-3 overflow-hidden">
+                                    <button
+                                        type="button"
+                                        draggable
+                                        onDragStart={(e) => {
+                                            e.stopPropagation();
+                                            handleBoardDragStart(board.id, e);
+                                        }}
+                                        onDragEnd={handleBoardDragEnd}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="p-1 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-200 cursor-grab active:cursor-grabbing flex-shrink-0"
+                                        title="Arraste para reordenar"
+                                    >
+                                        <GripVertical className="w-4 h-4" />
+                                    </button>
                                     <span className={`text-xs font-bold w-5 text-center flex-shrink-0 ${selectedId === board.id ? 'text-blue-700' : 'text-gray-400'}`}>
                                         {index + 1}
                                     </span>
@@ -222,27 +292,6 @@ export default function QuadroPage() {
 
                                 {/* Action Buttons Row - Always visible on selected, hover on others */}
                                 <div className={`flex flex-wrap items-center gap-1 mt-2 pt-2 border-t border-gray-100 transition-all duration-200 ${selectedId === board.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                                    {/* Order Buttons */}
-                                    <button
-                                        onClick={(e) => moveBoard(board.id, -1, e)}
-                                        disabled={index === 0}
-                                        className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                                        title="Mover para cima"
-                                    >
-                                        <ArrowUp className="w-3.5 h-3.5" />
-                                        <span>Subir</span>
-                                    </button>
-
-                                    <button
-                                        onClick={(e) => moveBoard(board.id, 1, e)}
-                                        disabled={index === boards.length - 1}
-                                        className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                                        title="Mover para baixo"
-                                    >
-                                        <ArrowDown className="w-3.5 h-3.5" />
-                                        <span>Descer</span>
-                                    </button>
-
                                     {/* Rename Button */}
                                     <button
                                         onClick={(e) => handleRename(board.id, e)}

@@ -1,7 +1,107 @@
 [
   {
+    "id": "bw29j2rdf",
+    "title": "TÍTULO",
+    "content": {
+      "title": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": null
+            }
+          }
+        ]
+      },
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "right"
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "right"
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "right"
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "right"
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "right"
+            },
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": "Montserrat",
+                      "fontSize": "80px",
+                      "lineHeight": null,
+                      "color": "#00358e"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": " LICITAÇÃO"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "right"
+            },
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": "Montserrat",
+                      "fontSize": "48px",
+                      "lineHeight": null,
+                      "color": "#00358e"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "MONITORAMENTO & AÇÕES"
+              }
+            ]
+          }
+        ]
+      },
+      "logoLayout": "left-center-medium"
+    },
+    "isVisible": true
+  },
+  {
     "id": "4fcye8njj",
-    "title": "teste3",
+    "title": "AVISO",
     "content": {
       "title": {
         "type": "doc",
@@ -18,17 +118,17 @@
                   {
                     "type": "textStyle",
                     "attrs": {
-                      "fontFamily": "Montserrat",
-                      "fontSize": "58px",
+                      "fontFamily": "Inter",
+                      "fontSize": null,
                       "lineHeight": null,
-                      "color": "#ff0000"
+                      "color": "#00358e"
                     }
                   },
                   {
                     "type": "bold"
                   }
                 ],
-                "text": "teste3"
+                "text": "AVISO"
               }
             ]
           }
@@ -67,13 +167,14 @@
             }
           }
         ]
-      }
+      },
+      "logoLayout": "bottom-right-small"
     },
-    "isVisible": true
+    "isVisible": false
   },
   {
     "id": "xgjnyjjsi",
-    "title": "pagina 2",
+    "title": "AVISO 3",
     "content": {
       "title": {
         "type": "doc",
@@ -100,7 +201,7 @@
                     "type": "bold"
                   }
                 ],
-                "text": "pagina 2"
+                "text": "AVISO 3"
               }
             ]
           }
@@ -457,13 +558,14 @@
             }
           }
         ]
-      }
+      },
+      "logoLayout": "bottom-right-small"
     },
-    "isVisible": true
+    "isVisible": false
   },
   {
-    "id": "bw29j2rdf",
-    "title": "página 1",
+    "id": "p7bz35vt3",
+    "title": "Quadro 4",
     "content": {
       "title": {
         "type": "doc",
@@ -490,7 +592,7 @@
                     "type": "bold"
                   }
                 ],
-                "text": "página 1"
+                "text": "Quadro 4"
               }
             ]
           }
@@ -506,7 +608,8 @@
             }
           }
         ]
-      }
+      },
+      "logoLayout": "bottom-right-small"
     },
     "isVisible": true
   }

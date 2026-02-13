@@ -152,6 +152,24 @@ const LineHeight = Extension.create({
 const fontSizes = ['10', '11', '12', '16', '18', '20', '24', '32', '36', '40', '44', '48', '58', '60', '64', '80', '88'];
 const lineHeights = ['1', '1.15', '1.25', '1.5', '1.75', '2'];
 const presetColors = ['#000000', '#2563EB', '#00358e', '#ff0000', '#16A34A', '#D97706', '#9333EA'];
+const logoLayoutOrder = ['bottom-right-small', 'center-large', 'left-center-medium'];
+const logoLayoutMeta = {
+    'bottom-right-small': {
+        label: 'Padrão',
+        containerClass: 'absolute bottom-6 right-8 pointer-events-none select-none z-0',
+        imageClass: 'h-12 w-auto object-contain',
+    },
+    'center-large': {
+        label: 'Centralizado Grande',
+        containerClass: 'absolute inset-0 pointer-events-none select-none z-0 flex items-center justify-center',
+        imageClass: 'h-40 w-auto object-contain',
+    },
+    'left-center-medium': {
+        label: 'Esquerda Grande',
+        containerClass: 'absolute inset-y-0 left-8 pointer-events-none select-none z-0 flex items-center',
+        imageClass: 'h-28 w-auto object-contain',
+    },
+};
 
 const getTextStyleAttrFromMarks = (marks, attrName) =>
     marks?.find(mark => mark.type?.name === 'textStyle' && mark.attrs?.[attrName])?.attrs?.[attrName] || '';
@@ -176,7 +194,7 @@ const normalizeColor = (value) => {
 
 const normalizeFontFamily = (value = '') => value.replace(/['"]/g, '').toLowerCase();
 
-const MenuBar = ({ editor }) => {
+const MenuBar = ({ editor, logoLayout = 'bottom-right-small', onChangeLogoLayout }) => {
     const [toolbarState, setToolbarState] = useState({
         fontFamily: 'default',
         fontSize: '',
@@ -296,6 +314,9 @@ const MenuBar = ({ editor }) => {
         }
         return direction === 'up' ? higher : lower;
     };
+
+    const currentLogoLayout = logoLayoutMeta[logoLayout] ? logoLayout : logoLayoutOrder[0];
+    const nextLogoLayout = logoLayoutOrder[(logoLayoutOrder.indexOf(currentLogoLayout) + 1) % logoLayoutOrder.length];
 
     return (
         <div className="flex flex-wrap gap-2 p-3 bg-white border-b border-gray-200 rounded-t-xl sticky top-0 z-10 items-center">
@@ -524,6 +545,19 @@ const MenuBar = ({ editor }) => {
                 </button>
             </div>
 
+            <div className="flex items-center border-r border-gray-200 pr-2 mr-1 gap-2">
+                <button
+                    onClick={() => onChangeLogoLayout?.(nextLogoLayout)}
+                    className="h-9 px-3 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 text-xs font-semibold transition-colors"
+                    title={`Mudar logo: ${logoLayoutMeta[nextLogoLayout].label}`}
+                >
+                    MUDAR LOGO
+                </button>
+                <span className="text-xs text-gray-500 hidden md:inline">
+                    {logoLayoutMeta[currentLogoLayout].label}
+                </span>
+            </div>
+
             <div className="flex gap-1 ml-auto">
                 <button
                     onClick={() => editor.chain().focus().undo().run()}
@@ -651,6 +685,11 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false,
         return '';
     });
 
+    const [logoLayout, setLogoLayout] = useState(() => {
+        const layout = initialContent?.logoLayout;
+        return logoLayoutMeta[layout] ? layout : logoLayoutOrder[0];
+    });
+
     const [activeEditor, setActiveEditor] = useState(null);
 
     // Title Editor - Fully featured but styled as header
@@ -701,7 +740,8 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false,
             if (onUpdate) {
                 onUpdate({
                     title: content,
-                    body: bodyEditor?.getJSON()
+                    body: bodyEditor?.getJSON(),
+                    logoLayout,
                 });
             }
         },
@@ -740,7 +780,8 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false,
             if (onUpdate) {
                 onUpdate({
                     title: titleEditor?.getJSON(),
-                    body: editor.getJSON()
+                    body: editor.getJSON(),
+                    logoLayout,
                 });
             }
         },
@@ -767,11 +808,31 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false,
         bodyEditor?.setEditable(!readOnly);
     }, [readOnly, titleEditor, bodyEditor]);
 
+    const handleChangeLogoLayout = (nextLayout) => {
+        const resolvedLayout = logoLayoutMeta[nextLayout] ? nextLayout : logoLayoutOrder[0];
+        setLogoLayout(resolvedLayout);
+        if (onUpdate) {
+            onUpdate({
+                title: titleEditor?.getJSON(),
+                body: bodyEditor?.getJSON(),
+                logoLayout: resolvedLayout,
+            });
+        }
+    };
+
+    const logoConfig = logoLayoutMeta[logoLayout] || logoLayoutMeta[logoLayoutOrder[0]];
+
     if (!titleEditor || !bodyEditor) return <div className="p-10 text-center text-gray-400">Carregando editor...</div>;
 
     return (
         <div className={`flex flex-col h-full bg-gray-100 overflow-hidden ${readOnly ? 'bg-black flex items-center justify-center' : ''}`}>
-            {!readOnly && <MenuBar editor={activeEditor || bodyEditor} />}
+            {!readOnly && (
+                <MenuBar
+                    editor={activeEditor || bodyEditor}
+                    logoLayout={logoLayout}
+                    onChangeLogoLayout={handleChangeLogoLayout}
+                />
+            )}
 
             <div className={`flex-1 w-full overflow-hidden flex items-center justify-center ${readOnly ? '' : 'p-3 md:p-4'}`}>
                 <div
@@ -799,11 +860,11 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false,
                     </div>
 
                     {/* Watermark Logo */}
-                    <div className="absolute bottom-6 right-8 pointer-events-none select-none z-0 opacity-90">
+                    <div className={logoConfig.containerClass}>
                         <img
-                            src="/minilogo.png"
+                            src="/logogrande.png"
                             alt="Logo"
-                            className="h-12 w-auto object-contain"
+                            className={logoConfig.imageClass}
                         />
                     </div>
                 </div>
@@ -811,3 +872,4 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false,
         </div>
     );
 }
+
