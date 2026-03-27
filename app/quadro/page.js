@@ -323,11 +323,13 @@ export default function QuadroPage() {
                                             {board.title}
                                         </span>
 
-                                        {/* Status dot */}
-                                        <span
-                                            className={`flex-shrink-0 w-1.5 h-1.5 rounded-full ${board.isVisible ? 'bg-emerald-400' : 'bg-gray-300'}`}
-                                            title={board.isVisible ? 'Visível no painel' : 'Oculto do painel'}
-                                        />
+                                        {/* Status dot + label */}
+                                        {board.isVisible && (
+                                            <span className="flex-shrink-0 flex items-center gap-1 text-[10px] font-medium text-emerald-600">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                                Visível
+                                            </span>
+                                        )}
                                     </div>
 
                                     {/* Tags row */}
