@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, Plus, Trash2, Layout, Edit2, GripVertical, MessageSquare } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, Edit2, GripVertical, MessageSquare, Eye, EyeOff } from 'lucide-react';
 import Whiteboard from '../components/Whiteboard';
 
-// Simple ID generator if uuid not available
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
 const extractTextFromNode = (node) => {
@@ -45,7 +44,6 @@ export default function QuadroPage() {
                     setBoards(normalizedBoards);
                     setSelectedId(normalizedBoards[0].id);
                 } else {
-                    // Should not happen due to API default, but handle empty
                     const newBoard = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false };
                     setBoards([newBoard]);
                     setSelectedId(newBoard.id);
@@ -53,7 +51,7 @@ export default function QuadroPage() {
                 setLoading(false);
             })
             .catch(err => {
-                console.error("Failed to load boards", err);
+                console.error('Failed to load boards', err);
                 setLoading(false);
             });
     }, []);
@@ -65,61 +63,49 @@ export default function QuadroPage() {
 
     useEffect(() => {
         const selectedBoard = boards.find((b) => b.id === selectedId);
-        if (!selectedBoard?.messageMode) {
-            return;
-        }
+        if (!selectedBoard?.messageMode) return;
 
         let cancelled = false;
         const loadMessageInfo = async () => {
             try {
                 const res = await fetch('/api/message-of-day', { cache: 'no-store' });
                 const data = await res.json().catch(() => null);
-                if (!cancelled && data?.message) {
-                    setMessageDayInfo(data);
-                }
+                if (!cancelled && data?.message) setMessageDayInfo(data);
             } catch {
-                // Keep previous info on transient fetch errors.
+                // keep previous info on transient errors
             }
         };
 
         loadMessageInfo();
         const timerId = setInterval(loadMessageInfo, 15 * 60 * 1000);
-
-        return () => {
-            cancelled = true;
-            clearInterval(timerId);
-        };
+        return () => { cancelled = true; clearInterval(timerId); };
     }, [boards, selectedId]);
 
     // Save on unmount
     useEffect(() => {
         return () => {
             if (boardsRef.current.length > 0) {
-                // Use fetch with keepalive to ensure it completes
                 fetch('/api/whiteboard', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(boardsRef.current),
-                    keepalive: true
-                }).catch(err => console.error("Unmount save failed", err));
+                    keepalive: true,
+                }).catch(err => console.error('Unmount save failed', err));
             }
         };
     }, []);
 
-    // Save boards to API (debounced)
     const saveBoards = (newBoards) => {
         setBoards(newBoards);
-        // Update ref immediately for safety
         boardsRef.current = newBoards;
-
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = setTimeout(() => {
             fetch('/api/whiteboard', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newBoards),
-            }).catch(err => console.error("Auto-save failed", err));
-        }, 1000); // Debounce global save
+            }).catch(err => console.error('Auto-save failed', err));
+        }, 1000);
     };
 
     const createBoard = () => {
@@ -133,7 +119,6 @@ export default function QuadroPage() {
         const updated = [...boards, newBoard];
         saveBoards(updated);
         setSelectedId(newBoard.id);
-        // Focus title after creation
         setTimeout(() => titleInputRef.current?.focus(), 100);
     };
 
@@ -142,33 +127,23 @@ export default function QuadroPage() {
         if (confirm('Tem certeza que deseja excluir este quadro?')) {
             const updated = boards.filter(b => b.id !== id);
             if (updated.length === 0) {
-                // Create default if all deleted
                 const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false };
                 updated.push(def);
             }
             saveBoards(updated);
-            // If deleted selected, switch
-            if (selectedId === id) {
-                setSelectedId(updated[0].id);
-            }
+            if (selectedId === id) setSelectedId(updated[0].id);
         }
     };
 
     const toggleVisibility = (id, e) => {
         e.stopPropagation();
-        const updated = boards.map(b => {
-            if (b.id === id) return { ...b, isVisible: !b.isVisible };
-            return b;
-        });
+        const updated = boards.map(b => b.id === id ? { ...b, isVisible: !b.isVisible } : b);
         saveBoards(updated);
     };
 
     const toggleMessageMode = (id, e) => {
         if (e) e.stopPropagation();
-        const updated = boards.map(b => {
-            if (b.id === id) return { ...b, messageMode: !b.messageMode };
-            return b;
-        });
+        const updated = boards.map(b => b.id === id ? { ...b, messageMode: !b.messageMode } : b);
         saveBoards(updated);
     };
 
@@ -194,17 +169,14 @@ export default function QuadroPage() {
 
     const reorderBoardsPreview = (sourceId, targetId, placeAfter = false) => {
         if (!sourceId || !targetId || sourceId === targetId) return;
-
         setBoards(prevBoards => {
-            const sourceIndex = prevBoards.findIndex(board => board.id === sourceId);
-            const targetIndex = prevBoards.findIndex(board => board.id === targetId);
+            const sourceIndex = prevBoards.findIndex(b => b.id === sourceId);
+            const targetIndex = prevBoards.findIndex(b => b.id === targetId);
             if (sourceIndex === -1 || targetIndex === -1) return prevBoards;
-
             let destinationIndex = targetIndex + (placeAfter ? 1 : 0);
             if (sourceIndex < destinationIndex) destinationIndex -= 1;
             destinationIndex = Math.max(0, Math.min(destinationIndex, prevBoards.length - 1));
             if (sourceIndex === destinationIndex) return prevBoards;
-
             const updated = [...prevBoards];
             const [moved] = updated.splice(sourceIndex, 1);
             updated.splice(destinationIndex, 0, moved);
@@ -219,7 +191,6 @@ export default function QuadroPage() {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         if (dragBoardId === boardId) return;
-
         const rect = e.currentTarget.getBoundingClientRect();
         const placeAfter = e.clientY > rect.top + rect.height / 2;
         setDragOverBoardId(boardId);
@@ -228,212 +199,257 @@ export default function QuadroPage() {
 
     const handleBoardDrop = (e) => {
         e.preventDefault();
-        if (dragChangedRef.current) {
-            saveBoards([...boardsRef.current]);
-        }
+        if (dragChangedRef.current) saveBoards([...boardsRef.current]);
         resetDragState();
     };
 
     const handleBoardDragEnd = () => {
-        if (dragChangedRef.current) {
-            saveBoards([...boardsRef.current]);
-        }
+        if (dragChangedRef.current) saveBoards([...boardsRef.current]);
         resetDragState();
     };
 
     const updateBoardContent = (content) => {
-        const updated = boards.map(b => {
-            if (b.id === selectedId) {
-                return {
-                    ...b,
-                    content,
-                    title: getTitleFromBoardContent(content, b.title),
-                };
-            }
-            return b;
-        });
+        const updated = boards.map(b =>
+            b.id === selectedId
+                ? { ...b, content, title: getTitleFromBoardContent(content, b.title) }
+                : b
+        );
         saveBoards(updated);
     };
 
     const selectedBoard = boards.find(b => b.id === selectedId);
 
-    if (loading) return <div className="flex h-screen items-center justify-center">Carregando...</div>;
+    if (loading) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-gray-50">
+                <div className="flex items-center gap-3 text-gray-400 text-sm">
+                    <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+                    Carregando quadros…
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
-            {/* Header */}
-            <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
-                <div className="flex items-center gap-4">
-                    <Link
-                        href="/"
-                        className="p-2 rounded-full hover:bg-gray-100 text-gray-600 transition-colors"
-                        title="Voltar para o Painel"
-                    >
-                        <ChevronLeft className="w-6 h-6" />
-                    </Link>
-                    <div>
-                        <h1 className="text-xl font-bold text-gray-900">Gerenciador de Avisos</h1>
-                    </div>
-                </div>
+
+            {/* ── HEADER ── */}
+            <header className="h-[52px] bg-white border-b border-gray-100 px-5 flex items-center gap-3 sticky top-0 z-50 flex-shrink-0">
+                <Link
+                    href="/"
+                    className="w-7 h-7 rounded-md bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors flex-shrink-0"
+                    title="Voltar para o Painel"
+                >
+                    <ChevronLeft className="w-4 h-4" />
+                </Link>
+
+                <span className="text-[14px] font-medium tracking-tight text-gray-900">
+                    Gerenciador de Avisos
+                </span>
+
+                <span className="ml-auto text-[11px] font-medium text-gray-400 bg-gray-50 border border-gray-200 rounded-full px-2.5 py-0.5">
+                    {boards.length} {boards.length === 1 ? 'quadro' : 'quadros'}
+                </span>
             </header>
 
-            <div className="flex flex-1 overflow-hidden h-[calc(100vh-80px)]">
-                {/* Sidebar */}
-                <aside className="w-80 bg-white border-r border-gray-200 flex flex-col">
-                    <div className="p-4 border-b border-gray-200">
+            <div className="flex flex-1 overflow-hidden h-[calc(100vh-52px)]">
+
+                {/* ── SIDEBAR ── */}
+                <aside className={`w-[300px] flex-shrink-0 bg-white border-r border-gray-100 flex flex-col ${dragBoardId ? 'cursor-grabbing' : ''}`}>
+
+                    {/* New board button */}
+                    <div className="p-3 border-b border-gray-100">
                         <button
                             onClick={createBoard}
-                            className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                            className="w-full h-[34px] flex items-center justify-center gap-2 rounded-lg bg-gray-50 border border-gray-200 text-[12px] font-medium text-gray-600 hover:bg-gray-100 hover:border-gray-300 transition-colors"
                         >
-                            <Plus className="w-4 h-4" /> Novo Quadro
+                            <Plus className="w-3.5 h-3.5" />
+                            Novo Quadro
                         </button>
                     </div>
-                    <div className={`flex-1 overflow-y-auto p-2 space-y-1 select-none ${dragBoardId ? 'cursor-grabbing' : ''}`}>
-                        {boards.map((board, index) => (
-                            <div
-                                key={board.id}
-                                onClick={() => setSelectedId(board.id)}
-                                onDragOver={(e) => handleBoardDragOver(board.id, e)}
-                                onDrop={handleBoardDrop}
-                                className={`group flex flex-col p-3 rounded-lg cursor-pointer transition-all duration-200 ${selectedId === board.id
-                                    ? 'bg-blue-50 border-blue-300 border shadow-sm'
-                                    : 'hover:bg-gray-100 border border-transparent hover:border-gray-200'}
-                                    ${dragBoardId === board.id ? 'opacity-60' : ''}
-                                    ${dragOverBoardId === board.id && dragBoardId !== board.id ? 'ring-2 ring-blue-300' : ''}
-                                    select-none`}
-                            >
-                                {/* Board Info Row */}
-                                <div className="flex items-center gap-3 overflow-hidden">
-                                    <button
-                                        type="button"
-                                        draggable
-                                        onDragStart={(e) => {
-                                            e.stopPropagation();
-                                            handleBoardDragStart(board.id, e);
-                                        }}
-                                        onDragEnd={handleBoardDragEnd}
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="p-1 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-200 cursor-grab active:cursor-grabbing flex-shrink-0"
-                                        title="Arraste para reordenar"
-                                    >
-                                        <GripVertical className="w-4 h-4" />
-                                    </button>
-                                    <span className={`text-xs font-bold w-5 text-center flex-shrink-0 ${selectedId === board.id ? 'text-blue-700' : 'text-gray-400'}`}>
-                                        {index + 1}
-                                    </span>
-                                    <Layout className={`w-5 h-5 flex-shrink-0 transition-colors ${selectedId === board.id ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-                                    <span className={`truncate font-medium transition-colors ${selectedId === board.id ? 'text-blue-900' : 'text-gray-700'}`}>
-                                        {board.title}
-                                    </span>
-                                    {board.messageMode && (
-                                        <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0 bg-blue-100 text-blue-700">
-                                            Mensagem
-                                        </span>
+
+                    {/* Section label */}
+                    <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-gray-400 select-none">
+                        Quadros
+                    </p>
+
+                    {/* Board list */}
+                    <div className="flex-1 overflow-y-auto px-2 pb-2 flex flex-col gap-0.5 select-none">
+                        {boards.map((board, index) => {
+                            const isActive = selectedId === board.id;
+                            const isDragging = dragBoardId === board.id;
+                            const isDragOver = dragOverBoardId === board.id && dragBoardId !== board.id;
+
+                            return (
+                                <div
+                                    key={board.id}
+                                    onClick={() => setSelectedId(board.id)}
+                                    onDragOver={(e) => handleBoardDragOver(board.id, e)}
+                                    onDrop={handleBoardDrop}
+                                    className={`
+                                        group relative rounded-lg px-2.5 py-2 cursor-pointer transition-colors duration-100
+                                        ${isActive ? 'bg-gray-50' : 'hover:bg-gray-50'}
+                                        ${isDragging ? 'opacity-50' : ''}
+                                        ${isDragOver ? 'ring-1 ring-blue-300 ring-inset' : ''}
+                                    `}
+                                >
+                                    {/* Active indicator */}
+                                    {isActive && (
+                                        <span className="absolute left-0 top-[6px] bottom-[6px] w-[2px] rounded-r-sm bg-blue-500" />
                                     )}
-                                    {/* Visibility Badge */}
-                                    <span className={`ml-auto text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${board.isVisible
-                                        ? 'bg-green-100 text-green-700'
-                                        : 'bg-gray-200 text-gray-500'}`}>
-                                        {board.isVisible ? 'Visível' : 'Oculto'}
-                                    </span>
+
+                                    {/* Top row */}
+                                    <div className="flex items-center gap-2 overflow-hidden">
+                                        {/* Drag handle */}
+                                        <button
+                                            type="button"
+                                            draggable
+                                            onDragStart={(e) => { e.stopPropagation(); handleBoardDragStart(board.id, e); }}
+                                            onDragEnd={handleBoardDragEnd}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="flex-shrink-0 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing p-0.5 rounded"
+                                            title="Arraste para reordenar"
+                                        >
+                                            <GripVertical className="w-3.5 h-3.5" />
+                                        </button>
+
+                                        {/* Number */}
+                                        <span className={`text-[10px] font-medium w-4 text-center flex-shrink-0 ${isActive ? 'text-blue-500' : 'text-gray-400'}`}>
+                                            {index + 1}
+                                        </span>
+
+                                        {/* Title */}
+                                        <span className={`truncate text-[13px] font-medium flex-1 ${isActive ? 'text-gray-900' : 'text-gray-700'}`}>
+                                            {board.title}
+                                        </span>
+
+                                        {/* Status dot */}
+                                        <span
+                                            className={`flex-shrink-0 w-1.5 h-1.5 rounded-full ${board.isVisible ? 'bg-emerald-400' : 'bg-gray-300'}`}
+                                            title={board.isVisible ? 'Visível no painel' : 'Oculto do painel'}
+                                        />
+                                    </div>
+
+                                    {/* Tags row */}
+                                    {(!board.isVisible || board.messageMode) && (
+                                        <div className="flex gap-1.5 mt-1.5 pl-[42px]">
+                                            {board.messageMode && (
+                                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100">
+                                                    Mensagem
+                                                </span>
+                                            )}
+                                            {!board.isVisible && (
+                                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 border border-gray-200">
+                                                    Oculto
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Action buttons — show on hover or active */}
+                                    <div className={`flex gap-0.5 mt-1.5 transition-all duration-100 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                                        <button
+                                            onClick={(e) => handleRename(board.id, e)}
+                                            className="flex items-center gap-1 px-1.5 py-1 rounded text-[11px] font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+                                        >
+                                            <Edit2 className="w-3 h-3" />
+                                            Renomear
+                                        </button>
+
+                                        <button
+                                            onClick={(e) => toggleVisibility(board.id, e)}
+                                            className="flex items-center gap-1 px-1.5 py-1 rounded text-[11px] font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+                                        >
+                                            {board.isVisible
+                                                ? <><EyeOff className="w-3 h-3" />Ocultar</>
+                                                : <><Eye className="w-3 h-3" />Mostrar</>
+                                            }
+                                        </button>
+
+                                        <button
+                                            onClick={(e) => deleteBoard(board.id, e)}
+                                            className="flex items-center gap-1 px-1.5 py-1 rounded text-[11px] font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                        >
+                                            <Trash2 className="w-3 h-3" />
+                                            Excluir
+                                        </button>
+                                    </div>
                                 </div>
-
-                                {/* Action Buttons Row - Always visible on selected, hover on others */}
-                                <div className={`flex flex-wrap items-center gap-1 mt-2 pt-2 border-t border-gray-100 transition-all duration-200 ${selectedId === board.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                                    {/* Rename Button */}
-                                    <button
-                                        onClick={(e) => handleRename(board.id, e)}
-                                        className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors shrink-0"
-                                        title="Clique para editar o título do quadro"
-                                    >
-                                        <Edit2 className="w-3.5 h-3.5" />
-                                        <span>Renomear</span>
-                                    </button>
-
-                                    {/* Toggle Visibility Button */}
-                                    <button
-                                        onClick={(e) => toggleVisibility(board.id, e)}
-                                        className={`flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-md transition-colors shrink-0 ${board.isVisible
-                                            ? 'text-green-700 hover:bg-green-100'
-                                            : 'text-gray-500 hover:bg-gray-200'}`}
-                                        title={board.isVisible ? "Clique para ocultar do painel TV" : "Clique para mostrar no painel TV"}
-                                    >
-                                        <div className={`w-2.5 h-2.5 rounded-full ${board.isVisible ? 'bg-green-500' : 'bg-gray-400'}`} />
-                                        <span>{board.isVisible ? 'Ocultar' : 'Mostrar'}</span>
-                                    </button>
-
-                                    {/* Message Mode Toggle */}
-                                    <button
-                                        onClick={(e) => toggleMessageMode(board.id, e)}
-                                        className={`flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-md transition-colors shrink-0 ${board.messageMode
-                                            ? 'text-blue-700 hover:bg-blue-100'
-                                            : 'text-gray-500 hover:bg-gray-200'}`}
-                                        title={board.messageMode ? "Modo mensagem ativo. Clique para desativar." : "Clique para ativar o modo mensagem automatica."}
-                                    >
-                                        <MessageSquare className="w-3.5 h-3.5" />
-                                        <span>{board.messageMode ? 'Mensagem ON' : 'Mensagem OFF'}</span>
-                                    </button>
-
-                                    {/* Delete Button */}
-                                    <button
-                                        onClick={(e) => deleteBoard(board.id, e)}
-                                        className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors shrink-0"
-                                        title="Clique para excluir este quadro permanentemente"
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                        <span>Excluir</span>
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </aside>
 
-                {/* Main Content */}
-                <main className="flex-1 bg-gray-50 p-6 flex flex-col min-w-0">
+                {/* ── MAIN CONTENT ── */}
+                <main className="flex-1 min-w-0 bg-gray-50 p-5 flex flex-col gap-3">
                     {selectedBoard ? (
-                        <div className="flex flex-col h-full space-y-4">
-                            {/* Board Title Input */}
-                            <div className="flex items-center gap-2 group/title">
+                        <>
+                            {/* Title row */}
+                            <div className="flex items-center gap-3">
                                 <input
                                     ref={titleInputRef}
                                     value={selectedBoard.title}
                                     onChange={(e) => {
-                                        const updated = boards.map(b => {
-                                            if (b.id === selectedId) return { ...b, title: e.target.value };
-                                            return b;
-                                        });
+                                        const updated = boards.map(b =>
+                                            b.id === selectedId ? { ...b, title: e.target.value } : b
+                                        );
                                         saveBoards(updated);
                                     }}
-                                    className="text-2xl font-bold bg-transparent border border-transparent hover:border-gray-300 focus:border-blue-500 rounded px-2 py-1 focus:ring-2 focus:ring-blue-100 text-gray-800 placeholder-gray-400 w-full transition-all outline-none"
-                                    placeholder="Titulo do Quadro"
+                                    className="flex-1 text-[20px] font-medium tracking-tight text-gray-900 bg-transparent outline-none border-b border-transparent hover:border-gray-300 focus:border-blue-500 px-0 py-1 transition-colors placeholder-gray-300"
+                                    placeholder="Título do quadro"
                                 />
+
+                                {/* Message mode pill */}
                                 <button
                                     onClick={() => toggleMessageMode(selectedBoard.id)}
-                                    className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${selectedBoard.messageMode
-                                        ? 'text-blue-700 bg-blue-100 border-blue-200 hover:bg-blue-200'
-                                        : 'text-gray-600 bg-white border-gray-300 hover:bg-gray-100'}`}
-                                    title={selectedBoard.messageMode ? 'Desativar modo mensagem neste quadro' : 'Ativar modo mensagem neste quadro'}
+                                    className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium border transition-colors ${
+                                        selectedBoard.messageMode
+                                            ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
+                                            : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-gray-700'
+                                    }`}
+                                    title={selectedBoard.messageMode ? 'Desativar modo mensagem' : 'Ativar modo mensagem'}
                                 >
-                                    <MessageSquare className="w-4 h-4" />
-                                    {selectedBoard.messageMode ? 'Modo Mensagem: ON' : 'Modo Mensagem: OFF'}
+                                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${selectedBoard.messageMode ? 'bg-blue-500' : 'bg-gray-300'}`} />
+                                    <MessageSquare className="w-3.5 h-3.5" />
+                                    Modo Mensagem
                                 </button>
-                                <Edit2 className="w-5 h-5 text-gray-400 opacity-0 group-hover/title:opacity-100 transition-opacity" />
                             </div>
 
+                            {/* Message of the day banner */}
                             {selectedBoard.messageMode && messageDayInfo?.message && (
-                                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs md:text-sm text-blue-900">
-                                    <strong>Hoje:</strong> #{messageDayInfo.message.id} - {messageDayInfo.message.referencia}
-                                    {' | '}
-                                    <strong>{messageDayInfo.nextWeekDay}:</strong> #{messageDayInfo.nextMessage?.id ?? '-'} - {messageDayInfo.nextMessage?.referencia ?? '-'}
+                                <div className="flex items-baseline gap-3 bg-blue-50 border border-blue-100 rounded-lg px-3.5 py-2.5 text-[12px] text-blue-800">
+                                    <span>
+                                        <strong className="font-semibold">Hoje</strong>
+                                        {' — '}#{messageDayInfo.message.id} {messageDayInfo.message.referencia}
+                                    </span>
+                                    <span className="text-blue-300 select-none">·</span>
+                                    <span>
+                                        <strong className="font-semibold">{messageDayInfo.nextWeekDay}</strong>
+                                        {' — '}#{messageDayInfo.nextMessage?.id ?? '–'} {messageDayInfo.nextMessage?.referencia ?? '–'}
+                                    </span>
                                 </div>
                             )}
 
-                            <div className="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                                {/* 
-                           We key by ID to force remount when switching boards 
-                           This resets internal editor state while passing new initialContent 
-                        */}
+                            {/* Editor area */}
+                            <div className="flex-1 min-h-0 relative bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                                {/* Visibility badge — inside editor top-right */}
+                                <div className={`absolute top-3 right-3 z-10 flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full border ${
+                                    selectedBoard.isVisible
+                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                        : 'bg-gray-100 text-gray-500 border-gray-200'
+                                }`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${selectedBoard.isVisible ? 'bg-emerald-400' : 'bg-gray-400'}`} />
+                                    {selectedBoard.isVisible ? 'Visível no painel' : 'Oculto do painel'}
+
+                                    {/* Inline toggle */}
+                                    <button
+                                        onClick={(e) => toggleVisibility(selectedBoard.id, e)}
+                                        className="ml-1 text-[10px] underline underline-offset-2 opacity-70 hover:opacity-100 transition-opacity"
+                                    >
+                                        {selectedBoard.isVisible ? 'Ocultar' : 'Mostrar'}
+                                    </button>
+                                </div>
+
                                 <Whiteboard
                                     key={selectedBoard.id}
                                     initialContent={selectedBoard.content}
@@ -443,10 +459,10 @@ export default function QuadroPage() {
                                     messageMode={selectedBoard.messageMode}
                                 />
                             </div>
-                        </div>
+                        </>
                     ) : (
-                        <div className="flex h-full items-center justify-center text-gray-400">
-                            Selecione um quadro
+                        <div className="flex h-full items-center justify-center text-[13px] text-gray-400">
+                            Selecione um quadro na barra lateral
                         </div>
                     )}
                 </main>
@@ -454,4 +470,3 @@ export default function QuadroPage() {
         </div>
     );
 }
-

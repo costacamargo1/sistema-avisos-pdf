@@ -690,7 +690,7 @@
       "logoLayout": "bottom-right-small",
       "verticalAlign": "middle"
     },
-    "isVisible": false,
+    "isVisible": true,
     "messageMode": true
   }
 ]
