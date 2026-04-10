@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown, Bold, CaseSensitive } from 'lucide-react';
 
 const STATUS_OPTIONS = [
   { value: 'none',     label: 'Sem status',     color: '#6B7280', bg: '#F3F4F6', border: '#D1D5DB' },
@@ -21,11 +21,13 @@ const emptyItem = () => ({
   process: '',
   product: '',
   action: '',
+  observation: '',
   status: 'none',
 });
 
 // ─── TV DISPLAY ──────────────────────────────────────────────────────────────
-export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc }) {
+export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc, titleStyle: rawTitleStyle }) {
+  const titleStyle = rawTitleStyle ?? {};
   const validItems = items.filter(i => i.process || i.product || i.action);
 
   // Dynamic font scaling based on item count — smaller sizes to prevent wrapping
@@ -50,6 +52,11 @@ export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc }) {
     gap       = '1vw';
   }
 
+  // Merge user title style with dynamic defaults
+  const resolvedTitleFontFamily = titleStyle.fontFamily
+    ? `'${titleStyle.fontFamily}', sans-serif`
+    : "'Aptos', 'Montserrat', sans-serif";
+
   return (
     <div style={{
       width: '100%', height: '100%',
@@ -64,11 +71,12 @@ export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc }) {
         textAlign: 'center',
       }}>
         <span style={{
-          fontSize: titleSize,
-          fontWeight: 800,
-          color: '#00358E',
-          textTransform: 'uppercase',
+          fontSize: (titleStyle.fontSize && titleStyle.fontSize !== 'auto') ? titleStyle.fontSize : titleSize,
+          fontWeight: titleStyle.fontWeight ?? 800,
+          color: titleStyle.color || '#00358E',
+          textTransform: titleStyle.textTransform || 'uppercase',
           letterSpacing: '0.04em',
+          fontFamily: resolvedTitleFontFamily,
         }}>
           {boardTitle}
         </span>
@@ -87,90 +95,118 @@ export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc }) {
         {validItems.map((item, idx) => {
           const st = STATUS_MAP[item.status] || STATUS_MAP.none;
           const hasTag = item.status && item.status !== 'none';
+          const hasObs = Boolean(item.observation?.trim());
           return (
-            <div key={item.id} style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.6vw',
-              lineHeight: 1.3,
-              flexWrap: 'nowrap',
-              minWidth: 0,
-            }}>
-              {/* Number */}
-              <span style={{
-                fontSize: itemSize,
-                fontWeight: 800,
-                color: '#00358E',
-                minWidth: '2vw',
-                flexShrink: 0,
-                whiteSpace: 'nowrap',
+            <div key={item.id}>
+              {/* Main row */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.6vw',
+                lineHeight: 1.3,
+                flexWrap: 'nowrap',
+                minWidth: 0,
               }}>
-                {idx + 1}.
-              </span>
-
-              {/* Process */}
-              {item.process && (
+                {/* Number */}
                 <span style={{
                   fontSize: itemSize,
                   fontWeight: 800,
                   color: '#00358E',
+                  minWidth: '2vw',
                   flexShrink: 0,
                   whiteSpace: 'nowrap',
                 }}>
-                  {item.process}
+                  {idx + 1}.
                 </span>
-              )}
 
-              {/* Arrow + Product */}
-              {item.product && (
-                <>
-                  <span style={{ fontSize: itemSize, color: '#9CA3AF', fontWeight: 400, flexShrink: 0 }}>→</span>
+                {/* Process */}
+                {item.process && (
                   <span style={{
                     fontSize: itemSize,
                     fontWeight: 800,
-                    color: '#C2410C',
+                    color: '#00358E',
                     flexShrink: 0,
                     whiteSpace: 'nowrap',
                   }}>
-                    {item.product}
+                    {item.process}
                   </span>
-                </>
-              )}
+                )}
 
-              {/* Dash + Action */}
-              {item.action && (
-                <>
-                  <span style={{ fontSize: itemSize, color: '#9CA3AF', flexShrink: 0 }}>—</span>
+                {/* Arrow + Product */}
+                {item.product && (
+                  <>
+                    <span style={{ fontSize: itemSize, color: '#9CA3AF', fontWeight: 400, flexShrink: 0 }}>→</span>
+                    <span style={{
+                      fontSize: itemSize,
+                      fontWeight: 800,
+                      color: '#C2410C',
+                      flexShrink: 0,
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {item.product}
+                    </span>
+                  </>
+                )}
+
+                {/* Dash + Action */}
+                {item.action && (
+                  <>
+                    <span style={{ fontSize: itemSize, color: '#9CA3AF', flexShrink: 0 }}>—</span>
+                    <span style={{
+                      fontSize: itemSize,
+                      fontWeight: 700,
+                      color: '#111827',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      minWidth: 0,
+                    }}>
+                      {item.action}
+                    </span>
+                  </>
+                )}
+
+                {/* Status tag */}
+                {hasTag && (
                   <span style={{
-                    fontSize: itemSize,
+                    fontSize: `calc(${itemSize} * 0.78)`,
                     fontWeight: 700,
-                    color: '#111827',
+                    color: st.color,
+                    backgroundColor: st.bg,
+                    border: `1px solid ${st.border}`,
+                    borderRadius: '4px',
+                    padding: '0.15vw 0.5vw',
+                    flexShrink: 0,
                     whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    minWidth: 0,
+                    marginLeft: '0.3vw',
                   }}>
-                    {item.action}
+                    {st.label.toUpperCase()}
                   </span>
-                </>
-              )}
+                )}
+              </div>
 
-              {/* Status tag */}
-              {hasTag && (
-                <span style={{
-                  fontSize: `calc(${itemSize} * 0.78)`,
-                  fontWeight: 700,
-                  color: st.color,
-                  backgroundColor: st.bg,
-                  border: `1px solid ${st.border}`,
-                  borderRadius: '4px',
-                  padding: '0.15vw 0.5vw',
-                  flexShrink: 0,
-                  whiteSpace: 'nowrap',
-                  marginLeft: '0.3vw',
+              {/* Observation line */}
+              {hasObs && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: '0.4vw',
+                  paddingLeft: '2.6vw',
+                  marginTop: '0.2vw',
                 }}>
-                  {st.label.toUpperCase()}
-                </span>
+                  <span style={{
+                    fontSize: `calc(${itemSize} * 0.85)`,
+                    color: '#6B7280',
+                    flexShrink: 0,
+                  }}>↳</span>
+                  <span style={{
+                    fontSize: `calc(${itemSize} * 0.85)`,
+                    fontWeight: 600,
+                    color: '#374151',
+                  }}>
+                    {item.observation}
+                  </span>
+                </div>
               )}
             </div>
           );
@@ -196,18 +232,60 @@ export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc }) {
   );
 }
 
+// ─── TITLE STYLE CONFIG ──────────────────────────────────────────────────────
+const TITLE_FONT_OPTIONS = [
+  { value: 'Montserrat', label: 'Montserrat' },
+  { value: 'Aptos', label: 'Aptos' },
+  { value: 'Inter', label: 'Inter' },
+  { value: 'Arial', label: 'Arial' },
+];
+
+const TITLE_SIZE_OPTIONS = [
+  { value: 'auto', label: 'Auto' },
+  { value: '1.6vw', label: 'Pequeno' },
+  { value: '2vw', label: 'Médio' },
+  { value: '2.4vw', label: 'Padrão' },
+  { value: '2.8vw', label: 'Grande' },
+  { value: '3.2vw', label: 'Extra Grande' },
+  { value: '3.8vw', label: 'Máximo' },
+];
+
+const TITLE_COLOR_PRESETS = [
+  '#00358E', '#000000', '#2563EB', '#C2410C', '#16A34A', '#854F0B', '#9333EA',
+];
+
+const DEFAULT_TITLE_STYLE = {
+  fontFamily: 'Montserrat',
+  fontSize: 'auto',
+  color: '#00358E',
+  fontWeight: 800,
+  textTransform: 'uppercase',
+};
+
 // ─── EDITOR ──────────────────────────────────────────────────────────────────
-export default function StructuredBoard({ initialItems = [], boardTitle = '', onUpdate }) {
+export default function StructuredBoard({ initialItems = [], boardTitle = '', onUpdate, titleStyle: initialTitleStyle, onTitleStyleUpdate }) {
   const [items, setItems] = useState(() =>
     initialItems.length > 0 ? initialItems : [emptyItem()]
   );
+  const [titleStyle, setTitleStyle] = useState(() => ({
+    ...DEFAULT_TITLE_STYLE,
+    ...(initialTitleStyle || {}),
+  }));
   const saveTimer = useRef(null);
+  const titleStyleTimer = useRef(null);
   const lastInputRef = useRef(null);
 
   const save = (newItems) => {
     setItems(newItems);
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => onUpdate?.(newItems), 400);
+  };
+
+  const updateTitleStyle = (updates) => {
+    const newStyle = { ...titleStyle, ...updates };
+    setTitleStyle(newStyle);
+    if (titleStyleTimer.current) clearTimeout(titleStyleTimer.current);
+    titleStyleTimer.current = setTimeout(() => onTitleStyleUpdate?.(newStyle), 300);
   };
 
   const addItem = () => {
@@ -239,18 +317,142 @@ export default function StructuredBoard({ initialItems = [], boardTitle = '', on
     save(arr);
   };
 
+  const isBold = titleStyle.fontWeight >= 700;
+  const isUppercase = titleStyle.textTransform === 'uppercase';
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {/* Title style controls */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '10px',
+        padding: '7px 16px',
+        borderBottom: '0.5px solid #E5E7EB',
+        background: '#F9FAFB',
+        flexWrap: 'wrap',
+      }}>
+        <span style={{ fontSize: '10px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '2px' }}>
+          Título
+        </span>
+
+        {/* Font Family */}
+        <select
+          value={titleStyle.fontFamily}
+          onChange={(e) => updateTitleStyle({ fontFamily: e.target.value })}
+          style={{
+            fontSize: '11px', fontWeight: 500, padding: '3px 8px',
+            border: '0.5px solid #D1D5DB', borderRadius: '6px',
+            background: '#fff', cursor: 'pointer', outline: 'none',
+            minWidth: '110px', color: '#374151',
+          }}
+        >
+          {TITLE_FONT_OPTIONS.map(f => (
+            <option key={f.value} value={f.value}>{f.label}</option>
+          ))}
+        </select>
+
+        {/* Font Size */}
+        <select
+          value={titleStyle.fontSize || 'auto'}
+          onChange={(e) => updateTitleStyle({ fontSize: e.target.value })}
+          style={{
+            fontSize: '11px', fontWeight: 500, padding: '3px 8px',
+            border: '0.5px solid #D1D5DB', borderRadius: '6px',
+            background: '#fff', cursor: 'pointer', outline: 'none',
+            minWidth: '90px', color: '#374151',
+          }}
+        >
+          {TITLE_SIZE_OPTIONS.map(s => (
+            <option key={s.value} value={s.value}>{s.label}</option>
+          ))}
+        </select>
+
+        {/* Separator */}
+        <div style={{ width: '1px', height: '18px', background: '#E5E7EB' }} />
+
+        {/* Color presets */}
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          {TITLE_COLOR_PRESETS.map(color => (
+            <button
+              key={color}
+              onClick={() => updateTitleStyle({ color })}
+              style={{
+                width: 18, height: 18, borderRadius: '50%',
+                backgroundColor: color,
+                border: titleStyle.color === color ? '2px solid #3B82F6' : '1px solid #D1D5DB',
+                cursor: 'pointer', padding: 0,
+                outline: titleStyle.color === color ? '2px solid #BFDBFE' : 'none',
+                outlineOffset: '1px',
+                transition: 'all 0.1s',
+              }}
+              title={color}
+            />
+          ))}
+        </div>
+
+        {/* Separator */}
+        <div style={{ width: '1px', height: '18px', background: '#E5E7EB' }} />
+
+        {/* Bold toggle */}
+        <button
+          onClick={() => updateTitleStyle({ fontWeight: isBold ? 400 : 800 })}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 28, height: 28, borderRadius: '6px',
+            border: '0.5px solid #D1D5DB', cursor: 'pointer',
+            background: isBold ? '#EFF6FF' : '#fff',
+            color: isBold ? '#2563EB' : '#6B7280',
+            transition: 'all 0.1s',
+          }}
+          title={isBold ? 'Remover negrito' : 'Aplicar negrito'}
+        >
+          <Bold style={{ width: 14, height: 14 }} />
+        </button>
+
+        {/* Uppercase toggle */}
+        <button
+          onClick={() => updateTitleStyle({ textTransform: isUppercase ? 'none' : 'uppercase' })}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            height: 28, padding: '0 8px', borderRadius: '6px',
+            border: '0.5px solid #D1D5DB', cursor: 'pointer',
+            background: isUppercase ? '#EFF6FF' : '#fff',
+            color: isUppercase ? '#2563EB' : '#6B7280',
+            fontSize: '10px', fontWeight: 600, letterSpacing: '0.04em',
+            transition: 'all 0.1s',
+          }}
+          title={isUppercase ? 'Texto normal' : 'MAIÚSCULAS'}
+        >
+          AA
+        </button>
+
+        {/* Preview */}
+        <span style={{
+          marginLeft: 'auto',
+          fontSize: '12px',
+          fontFamily: `'${titleStyle.fontFamily}', sans-serif`,
+          fontWeight: titleStyle.fontWeight,
+          color: titleStyle.color,
+          textTransform: titleStyle.textTransform,
+          opacity: 0.8,
+          maxWidth: '200px',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}>
+          {boardTitle || 'Título'}
+        </span>
+      </div>
+
       {/* Column headers */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '28px 24px 1fr 1fr 1.4fr 140px 56px',
+        gridTemplateColumns: '28px 24px 1fr 1fr 1.2fr 1fr 140px 56px',
         gap: '8px',
         padding: '8px 16px 6px',
         borderBottom: '0.5px solid var(--color-border-tertiary)',
         background: 'var(--color-background-secondary)',
       }}>
-        {['', '#', 'Processo / Tarefa', 'Produto', 'Ação / Descrição', 'Status', ''].map((h, i) => (
+        {['', '#', 'Processo / Tarefa', 'Produto', 'Ação / Descrição', 'Observação', 'Status', ''].map((h, i) => (
           <div key={i} style={{
             fontSize: '10px', fontWeight: 500, color: 'var(--color-text-tertiary)',
             textTransform: 'uppercase', letterSpacing: '0.06em',
@@ -315,7 +517,7 @@ function ItemRow({ item, index, total, onUpdate, onRemove, onMove }) {
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: '28px 24px 1fr 1fr 1.4fr 140px 56px',
+      gridTemplateColumns: '28px 24px 1fr 1fr 1.2fr 1fr 140px 56px',
       gap: '8px', alignItems: 'center',
       padding: '6px 12px',
       marginBottom: '4px',
@@ -363,6 +565,15 @@ function ItemRow({ item, index, total, onUpdate, onRemove, onMove }) {
         onFocus={handleFocus} onBlur={handleBlur}
         placeholder="Descreva a ação necessária..."
         style={inputStyle}
+      />
+
+      {/* Observation */}
+      <input
+        value={item.observation || ''}
+        onChange={e => onUpdate(item.id, 'observation', e.target.value)}
+        onFocus={handleFocus} onBlur={handleBlur}
+        placeholder="Observação opcional..."
+        style={{ ...inputStyle, fontSize: '12px', color: '#374151' }}
       />
 
       {/* Status */}

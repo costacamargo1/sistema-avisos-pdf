@@ -83,6 +83,7 @@ export default function QuadroPage() {
             messageMode: Boolean(board?.messageMode),
             boardMode: board.boardMode || 'rich',
             structuredItems: board.structuredItems || [],
+            titleStyle: board.titleStyle || null,
           }));
           setBoards(normalized);
           setSelectedId(normalized[0].id);
@@ -91,6 +92,7 @@ export default function QuadroPage() {
             id: generateId(), title: 'Quadro 1', content: null,
             isVisible: true, messageMode: false,
             boardMode: 'structured', structuredItems: [],
+            titleStyle: null,
           };
           setBoards([newBoard]);
           setSelectedId(newBoard.id);
@@ -150,6 +152,7 @@ export default function QuadroPage() {
       id: generateId(), title: `Quadro ${boards.length + 1}`,
       content: null, isVisible: true, messageMode: false,
       boardMode: 'structured', structuredItems: [],
+      titleStyle: null,
     };
     const updated = [...boards, newBoard];
     saveBoards(updated);
@@ -162,7 +165,7 @@ export default function QuadroPage() {
     if (!confirm('Tem certeza que deseja excluir este quadro?')) return;
     const updated = boards.filter(b => b.id !== id);
     if (updated.length === 0) {
-      const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false, boardMode: 'structured', structuredItems: [] };
+      const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false, boardMode: 'structured', structuredItems: [], titleStyle: null };
       updated.push(def);
     }
     saveBoards(updated);
@@ -232,6 +235,10 @@ export default function QuadroPage() {
 
   const updateBoardStructuredItems = (items) => {
     saveBoards(boards.map(b => b.id === selectedId ? { ...b, structuredItems: items } : b));
+  };
+
+  const updateBoardTitleStyle = (style) => {
+    saveBoards(boards.map(b => b.id === selectedId ? { ...b, titleStyle: style } : b));
   };
 
   const selectedBoard = boards.find(b => b.id === selectedId);
@@ -396,6 +403,8 @@ export default function QuadroPage() {
                     boardTitle={selectedBoard.title}
                     initialItems={selectedBoard.structuredItems || []}
                     onUpdate={updateBoardStructuredItems}
+                    titleStyle={selectedBoard.titleStyle}
+                    onTitleStyleUpdate={updateBoardTitleStyle}
                   />
                 )}
 
