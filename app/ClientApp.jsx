@@ -679,6 +679,9 @@ export default function ClientApp() {
               key={currentBoard.id || `wb-${currentBoardIndex}`}
               initialContent={currentBoard.content}
               messageMode={Boolean(currentBoard.messageMode)}
+              boardMode={currentBoard.boardMode || 'rich'}
+              structuredItems={currentBoard.structuredItems || []}
+              defaultTitleText={currentBoard.title || ''}
               readOnly={true}
             />
           )}

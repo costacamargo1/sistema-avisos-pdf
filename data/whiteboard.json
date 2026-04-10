@@ -118,12 +118,14 @@
       "logoLayout": "left-center-medium",
       "verticalAlign": "middle"
     },
-    "isVisible": true,
-    "messageMode": false
+    "isVisible": false,
+    "messageMode": false,
+    "boardMode": "rich",
+    "structuredItems": []
   },
   {
     "id": "4fcye8njj",
-    "title": "AVISO",
+    "title": "AÇÕES",
     "content": {
       "title": {
         "type": "doc",
@@ -193,8 +195,46 @@
       "logoLayout": "bottom-right-small",
       "verticalAlign": "top"
     },
-    "isVisible": false,
-    "messageMode": false
+    "isVisible": true,
+    "messageMode": false,
+    "boardMode": "structured",
+    "structuredItems": [
+      {
+        "id": "5ojrlm51k",
+        "process": "SESA RJ - 0150/2025",
+        "product": "ENOXAPARINA",
+        "action": "Impugnar sistema de segurança",
+        "status": "aguard"
+      },
+      {
+        "id": "ldmrk9bkc",
+        "process": "DLOG DF - 90050/2026",
+        "product": "LEVETIRACETAM",
+        "action": "ACOMPANHAR RESULTADO",
+        "status": "atencao"
+      },
+      {
+        "id": "0yyawskqq",
+        "process": "UERJ RJ - 0401/2026",
+        "product": "ETIRA",
+        "action": "HOMOLOGAÇÃO DO PROCESSO",
+        "status": "aguard"
+      },
+      {
+        "id": "elk81q9a0",
+        "process": "SESA SC - 147/2026",
+        "product": "NINTEDANIBE 150MG",
+        "action": "OFICIO DE REDUÇÃO",
+        "status": "urgente"
+      },
+      {
+        "id": "e9mgdhsfb",
+        "process": "SESA SC - 151/2026",
+        "product": "HEPTAR",
+        "action": "ACOMPANHAR INTENÇÃO DE RECURSO",
+        "status": "feito"
+      }
+    ]
   },
   {
     "id": "xgjnyjjsi",
@@ -587,7 +627,9 @@
       "verticalAlign": "top"
     },
     "isVisible": false,
-    "messageMode": false
+    "messageMode": false,
+    "boardMode": "rich",
+    "structuredItems": []
   },
   {
     "id": "p7bz35vt3",
@@ -639,7 +681,9 @@
       "verticalAlign": "top"
     },
     "isVisible": false,
-    "messageMode": false
+    "messageMode": false,
+    "boardMode": "rich",
+    "structuredItems": []
   },
   {
     "id": "4tu8v3eum",
@@ -690,7 +734,9 @@
       "logoLayout": "bottom-right-small",
       "verticalAlign": "middle"
     },
-    "isVisible": true,
-    "messageMode": true
+    "isVisible": false,
+    "messageMode": true,
+    "boardMode": "rich",
+    "structuredItems": []
   }
 ]

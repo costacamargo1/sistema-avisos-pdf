@@ -1,5 +1,6 @@
 'use client';
 
+import { StructuredBoardDisplay } from './StructuredBoard';
 import { useEditor, EditorContent, Extension } from '@tiptap/react';
 import { mergeAttributes } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
@@ -682,7 +683,7 @@ const SmartFormatting = Extension.create({
     },
 });
 
-export default function Whiteboard({ initialContent, onUpdate, readOnly = false, defaultTitleText = 'TITULO', messageMode = false }) {
+export default function Whiteboard({ initialContent, onUpdate, readOnly = false, defaultTitleText = 'TITULO', messageMode = false, boardMode = 'rich', structuredItems = [] }) {
     // Split initial content into title and body
     // Handle both legacy (direct content) and new ({title, body}) structures
     const [titleContent, setTitleContent] = useState(() => {
@@ -928,6 +929,19 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false,
 
     const logoConfig = logoLayoutMeta[logoLayout] || logoLayoutMeta[logoLayoutOrder[0]];
     const resolvedVerticalAlign = verticalAlignMeta[verticalAlign] ? verticalAlign : verticalAlignOrder[0];
+
+    // Structured list TV display
+    if (readOnly && boardMode === 'structured') {
+        return (
+            <div style={{ width: '100%', height: '100%' }}>
+                <StructuredBoardDisplay
+                    boardTitle={defaultTitleText}
+                    items={structuredItems}
+                    logoSrc="/logogrande.png"
+                />
+            </div>
+        );
+    }
 
     if (messageMode) {
         const todayMessage = messagePayload?.message || defaultMessagePayload.message;
