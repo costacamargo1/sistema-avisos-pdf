@@ -28,11 +28,27 @@ const emptyItem = () => ({
 export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc }) {
   const validItems = items.filter(i => i.process || i.product || i.action);
 
-  // Dynamic font scaling based on item count
+  // Dynamic font scaling based on item count — smaller sizes to prevent wrapping
   const count = validItems.length;
-  const titleSize = count <= 4 ? '3.2vw' : count <= 6 ? '2.6vw' : '2.2vw';
-  const itemSize  = count <= 4 ? '2.2vw' : count <= 6 ? '1.8vw' : '1.5vw';
-  const gap       = count <= 4 ? '2.8vw' : count <= 6 ? '2vw'   : '1.4vw';
+  let titleSize, itemSize, gap;
+
+  if (count <= 3) {
+    titleSize = '2.8vw';
+    itemSize  = '1.8vw';
+    gap       = '2.4vw';
+  } else if (count <= 5) {
+    titleSize = '2.4vw';
+    itemSize  = '1.55vw';
+    gap       = '1.8vw';
+  } else if (count <= 7) {
+    titleSize = '2.2vw';
+    itemSize  = '1.35vw';
+    gap       = '1.3vw';
+  } else {
+    titleSize = '2vw';
+    itemSize  = '1.15vw';
+    gap       = '1vw';
+  }
 
   return (
     <div style={{
@@ -44,7 +60,7 @@ export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc }) {
       {/* Title bar */}
       <div style={{
         borderBottom: '2px solid #E5E7EB',
-        padding: '1.8vw 3vw 1.4vw',
+        padding: '1.6vw 3vw 1.2vw',
         textAlign: 'center',
       }}>
         <span style={{
@@ -64,7 +80,7 @@ export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc }) {
         display: 'flex',
         flexDirection: 'column',
         justifyContent: validItems.length > 0 ? 'center' : 'flex-start',
-        padding: `${gap} 3.5vw`,
+        padding: `${gap} 3vw`,
         gap: gap,
         overflowY: 'hidden',
       }}>
@@ -72,14 +88,22 @@ export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc }) {
           const st = STATUS_MAP[item.status] || STATUS_MAP.none;
           const hasTag = item.status && item.status !== 'none';
           return (
-            <div key={item.id} style={{ display: 'flex', alignItems: 'baseline', gap: '0.8vw', lineHeight: 1.25 }}>
+            <div key={item.id} style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6vw',
+              lineHeight: 1.3,
+              flexWrap: 'nowrap',
+              minWidth: 0,
+            }}>
               {/* Number */}
               <span style={{
                 fontSize: itemSize,
                 fontWeight: 800,
                 color: '#00358E',
-                minWidth: '2.4vw',
+                minWidth: '2vw',
                 flexShrink: 0,
+                whiteSpace: 'nowrap',
               }}>
                 {idx + 1}.
               </span>
@@ -91,6 +115,7 @@ export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc }) {
                   fontWeight: 800,
                   color: '#00358E',
                   flexShrink: 0,
+                  whiteSpace: 'nowrap',
                 }}>
                   {item.process}
                 </span>
@@ -105,6 +130,7 @@ export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc }) {
                     fontWeight: 800,
                     color: '#C2410C',
                     flexShrink: 0,
+                    whiteSpace: 'nowrap',
                   }}>
                     {item.product}
                   </span>
@@ -119,6 +145,10 @@ export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc }) {
                     fontSize: itemSize,
                     fontWeight: 700,
                     color: '#111827',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    minWidth: 0,
                   }}>
                     {item.action}
                   </span>
@@ -134,10 +164,10 @@ export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc }) {
                   backgroundColor: st.bg,
                   border: `1px solid ${st.border}`,
                   borderRadius: '4px',
-                  padding: '0.15vw 0.6vw',
+                  padding: '0.15vw 0.5vw',
                   flexShrink: 0,
                   whiteSpace: 'nowrap',
-                  alignSelf: 'center',
+                  marginLeft: '0.3vw',
                 }}>
                   {st.label.toUpperCase()}
                 </span>
