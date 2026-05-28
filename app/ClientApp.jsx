@@ -621,16 +621,16 @@ export default function ClientApp({
                     <Download className="w-4 h-4" />
                   </a>
                 )}
-                <Link
-                  href={quadroHref}
-                  className="btn-secondary"
-                  title="Editar Quadro"
-                >
-                  <LayoutTemplate className="w-4 h-4" />
-                  <span className="hidden sm:inline">Quadro</span>
-                </Link>
               </>
             )}
+            <Link
+              href={quadroHref}
+              className="btn-secondary"
+              title="Editar Quadro"
+            >
+              <LayoutTemplate className="w-4 h-4" />
+              <span className="hidden sm:inline">Quadro</span>
+            </Link>
             <button
               className="btn-secondary"
               onClick={toggleFullscreen}

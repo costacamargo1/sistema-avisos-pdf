@@ -1,7 +1,7 @@
 [
   {
     "id": "8g5q5nrwf",
-    "title": "AVISOS X",
+    "title": "AVISOS XXX",
     "content": {
       "title": {
         "type": "doc",
@@ -67,7 +67,7 @@
     },
     "isVisible": true,
     "messageMode": false,
-    "boardMode": "rich",
+    "boardMode": "structured",
     "structuredItems": [
       {
         "id": "qdi21g2oj",
