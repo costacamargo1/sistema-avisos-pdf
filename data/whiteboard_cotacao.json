@@ -20,7 +20,15 @@
           "bold": true
         }
       },
-      "orgao": "xd memes"
+      "orgao": "xd memes",
+      "_widths": {
+        "orgao": 0.7,
+        "pregao": 0.6,
+        "prazo": 1.1
+      },
+      "pregao": "TESTE",
+      "abertura": "TESTE",
+      "prazo": "TESTE"
     },
     "sheetItems": [
       {

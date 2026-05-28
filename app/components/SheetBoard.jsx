@@ -1,9 +1,12 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Plus, Trash2, ChevronUp, ChevronDown, Bold } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown, Bold, Minus, RotateCcw } from 'lucide-react';
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
+const MIN_COLUMN_FLEX = 0.6;
+const MAX_COLUMN_FLEX = 3.4;
+const COLUMN_FLEX_STEP = 0.2;
 
 // Paleta de cores para formatacao de coluna (mesma identidade da lista estruturada).
 const CELL_COLOR_PRESETS = [
@@ -18,6 +21,8 @@ const CELL_COLOR_PRESETS = [
 
 // Formatacao de coluna fica em headers._fmt[colKey] = { color, bold }.
 const getColumnFmt = (headers, key) => (headers?._fmt?.[key]) || {};
+const hasManualColumnFlex = (headers, key) =>
+  Boolean(headers?._widths && Object.prototype.hasOwnProperty.call(headers._widths, key));
 
 const CELL_INPUT_STYLE = {
   width: '100%', fontSize: '12px', fontFamily: 'var(--font-sans)',
@@ -51,7 +56,30 @@ const resolveHeaderLabel = (headers, col) => {
 
 const headerHasContent = (headers, col) => Boolean(resolveHeaderLabel(headers, col));
 
-const gridTemplateFor = (cols) => cols.map(c => `${c.flex}fr`).join(' ');
+const getColumnFlex = (headers, col, rows = []) => {
+  const customFlex = Number(headers?._widths?.[col.key]);
+  if (Number.isFinite(customFlex) && customFlex > 0) return customFlex;
+
+  const longestCell = rows.reduce((max, row) => {
+    const length = String(row?.[col.key] || '').trim().length;
+    return Math.max(max, length);
+  }, 0);
+
+  if (longestCell === 0) {
+    return Math.max(MIN_COLUMN_FLEX, Math.min(col.flex, 0.9));
+  }
+
+  let contentFlex = 0.9;
+  if (longestCell >= 80) contentFlex = 3.0;
+  else if (longestCell >= 56) contentFlex = 2.6;
+  else if (longestCell >= 36) contentFlex = 2.2;
+  else if (longestCell >= 22) contentFlex = 1.7;
+  else if (longestCell >= 14) contentFlex = 1.3;
+
+  return Math.max(MIN_COLUMN_FLEX, Math.min(MAX_COLUMN_FLEX, Math.max(Math.min(col.flex, 1.4), contentFlex)));
+};
+
+const gridTemplateFor = (cols, headers, rows) => cols.map(c => `${getColumnFlex(headers, c, rows)}fr`).join(' ');
 
 // ─── TV DISPLAY ──────────────────────────────────────────────────────────────
 export function SheetBoardDisplay({ boardTitle, rows = [], headers = {}, logoSrc, titleStyle: rawTitleStyle }) {
@@ -63,7 +91,7 @@ export function SheetBoardDisplay({ boardTitle, rows = [], headers = {}, logoSrc
   const displayRows = rowsWithContent.length > 0
     ? rowsWithContent
     : (visibleCols.length > 0 ? (rows.length > 0 ? rows : [{ id: 'empty-display-row' }]) : []);
-  const gridTemplate = gridTemplateFor(visibleCols);
+  const gridTemplate = gridTemplateFor(visibleCols, headers, displayRows);
 
   // Escala a fonte conforme o número de linhas para evitar transbordo na TV.
   const count = displayRows.length;
@@ -229,7 +257,25 @@ export default function SheetBoard({ initialRows = [], initialHeaders = {}, onUp
     save(arr);
   };
 
-  const editorTemplate = `28px ${gridTemplateFor(COLUMNS)} 64px`;
+  const updateColumnWidth = (key, value) => {
+    const prevWidths = headers._widths || {};
+    const nextWidths = { ...prevWidths };
+
+    if (value == null) {
+      delete nextWidths[key];
+    } else {
+      const nextValue = Math.max(MIN_COLUMN_FLEX, Math.min(MAX_COLUMN_FLEX, value));
+      nextWidths[key] = Number(nextValue.toFixed(1));
+    }
+
+    const next = { ...headers };
+    if (Object.keys(nextWidths).length === 0) delete next._widths;
+    else next._widths = nextWidths;
+
+    saveHeaders(next);
+  };
+
+  const editorTemplate = `28px ${gridTemplateFor(COLUMNS, headers, rows)} 64px`;
 
   const handleFocus = e => { e.target.style.borderBottomColor = '#00358e'; };
   const handleBlur = e => { e.target.style.borderBottomColor = 'transparent'; };
@@ -252,8 +298,11 @@ export default function SheetBoard({ initialRows = [], initialHeaders = {}, onUp
               value={headers[c.key] ?? ''}
               placeholder={columnPlaceholder}
               columnFmt={getColumnFmt(headers, c.key)}
+              columnFlex={getColumnFlex(headers, c, rows)}
+              hasCustomWidth={hasManualColumnFlex(headers, c.key)}
               onChange={value => updateHeader(c.key, value)}
               onFmtChange={patch => updateColumnFmt(c.key, patch)}
+              onWidthChange={value => updateColumnWidth(c.key, value)}
               onFocus={handleFocus}
               onBlur={handleBlur}
             />
@@ -348,7 +397,18 @@ export default function SheetBoard({ initialRows = [], initialHeaders = {}, onUp
   );
 }
 
-function HeaderEditor({ value, placeholder, columnFmt, onChange, onFmtChange, onFocus, onBlur }) {
+function HeaderEditor({
+  value,
+  placeholder,
+  columnFmt,
+  columnFlex,
+  hasCustomWidth,
+  onChange,
+  onFmtChange,
+  onWidthChange,
+  onFocus,
+  onBlur,
+}) {
   const [open, setOpen] = useState(false);
   const closeTimer = useRef(null);
 
@@ -432,6 +492,53 @@ function HeaderEditor({ value, placeholder, columnFmt, onChange, onFmtChange, on
             }}
           >
             <Bold style={{ width: 13, height: 13 }} />
+          </button>
+
+          <div style={{ width: 1, height: 16, background: '#E5E7EB', margin: '0 2px' }} />
+
+          <button
+            onMouseDown={e => e.preventDefault()}
+            onClick={() => onWidthChange(columnFlex - COLUMN_FLEX_STEP)}
+            title="Reduzir largura da coluna"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 24, height: 24, borderRadius: '6px', cursor: 'pointer',
+              border: '0.5px solid #D1D5DB',
+              background: '#fff',
+              color: '#6B7280',
+            }}
+          >
+            <Minus style={{ width: 13, height: 13 }} />
+          </button>
+
+          <button
+            onMouseDown={e => e.preventDefault()}
+            onClick={() => onWidthChange(null)}
+            title="Voltar largura automatica"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 24, height: 24, borderRadius: '6px', cursor: 'pointer',
+              border: '0.5px solid #D1D5DB',
+              background: hasCustomWidth ? '#fff' : '#F9FAFB',
+              color: hasCustomWidth ? '#6B7280' : '#9CA3AF',
+            }}
+          >
+            <RotateCcw style={{ width: 13, height: 13 }} />
+          </button>
+
+          <button
+            onMouseDown={e => e.preventDefault()}
+            onClick={() => onWidthChange(columnFlex + COLUMN_FLEX_STEP)}
+            title="Aumentar largura da coluna"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 24, height: 24, borderRadius: '6px', cursor: 'pointer',
+              border: '0.5px solid #D1D5DB',
+              background: '#fff',
+              color: '#6B7280',
+            }}
+          >
+            <Plus style={{ width: 13, height: 13 }} />
           </button>
         </div>
       )}
