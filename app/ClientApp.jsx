@@ -5,10 +5,13 @@ import { useSearchParams } from 'next/navigation';
 import {
   Upload, Maximize2, Play, Pause,
   ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, Trash2, Monitor, X,
-  LayoutTemplate, Settings
+  LayoutTemplate, Settings, RefreshCw
 } from 'lucide-react';
 import Link from 'next/link';
 import Whiteboard from './components/Whiteboard';
+import { GoogleSheetDisplay } from './components/SheetBoard';
+
+const GOOGLE_SHEET_REFRESH_MS = 20 * 60 * 1000; // 20 minutos
 
 export default function ClientApp({
   category = 'pregao',
@@ -42,9 +45,13 @@ export default function ClientApp({
   const [uiVisible, setUiVisible] = useState(true);
   const hideUiTimerRef = useRef(null);
 
+  const [googleData, setGoogleData] = useState(null); // { headers, rows, title }
+  const [googleRefreshKey, setGoogleRefreshKey] = useState(0);
+
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
   const currentBoard = visibleBoards[currentBoardIndex] || visibleBoards[0] || null;
+  const isGoogleBoard = tvPhase === 'whiteboard' && currentBoard?.boardMode === 'google';
 
   const fitScaleContain = async (doc, pageNum, isTv = false) => {
     const container = viewerRef.current;
@@ -418,6 +425,23 @@ export default function ClientApp({
     }
   }, [tvPhase, visibleBoards, currentBoardIndex]);
 
+  // Busca os dados do Google Sheets para o quadro atual e atualiza a cada 20 min.
+  const googleUrl = isGoogleBoard ? (currentBoard?.googleSheetUrl || '') : '';
+  useEffect(() => {
+    if (!googleUrl) { setGoogleData(null); return; }
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/sheets?url=${encodeURIComponent(googleUrl)}`, { cache: 'no-store' });
+        const data = await res.json().catch(() => null);
+        if (!cancelled && res.ok && data) setGoogleData(data);
+      } catch {}
+    };
+    load();
+    const id = setInterval(load, GOOGLE_SHEET_REFRESH_MS);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [googleUrl, googleRefreshKey]);
+
   // Efeito para redimensionamento e renderização ao mudar página ou entrar em TV mode
   useEffect(() => {
     if (!tvMode || !pdfDoc) return;
@@ -703,7 +727,18 @@ export default function ClientApp({
           className={`absolute inset-0 bg-white transition-opacity duration-500
              ${(tvMode && tvPhase === 'whiteboard') ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'}`}
         >
-          {tvPhase === 'whiteboard' && currentBoard && (
+          {tvPhase === 'whiteboard' && currentBoard && isGoogleBoard && (
+            <GoogleSheetDisplay
+              key={currentBoard.id || `gs-${currentBoardIndex}`}
+              boardTitle={currentBoard.title || ''}
+              headers={googleData?.headers || []}
+              rows={googleData?.rows || []}
+              logoSrc="/logogrande.png"
+              titleStyle={currentBoard.titleStyle || null}
+            />
+          )}
+
+          {tvPhase === 'whiteboard' && currentBoard && !isGoogleBoard && (
             <Whiteboard
               key={currentBoard.id || `wb-${currentBoardIndex}`}
               initialContent={currentBoard.content}
@@ -784,6 +819,19 @@ export default function ClientApp({
                 <option value={15000}>15s</option>
               </select>
             </div>
+
+            {/* Google Sheet refresh */}
+            {isGoogleBoard && googleUrl && (
+              <div className="flex items-center gap-1 px-2 border-r border-gray-200">
+                <button
+                  className="btn-ghost p-2 rounded-xl"
+                  onClick={() => setGoogleRefreshKey(k => k + 1)}
+                  title="Atualizar planilha agora"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+              </div>
+            )}
 
             {/* Zoom & Screen */}
             <div className="flex items-center gap-1 pl-2">

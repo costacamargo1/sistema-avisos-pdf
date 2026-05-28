@@ -197,6 +197,102 @@ export function SheetBoardDisplay({ boardTitle, rows = [], headers = {}, logoSrc
   );
 }
 
+// ─── TV DISPLAY — ESPELHO LIVRE DO GOOGLE SHEETS ───────────────────────────────
+// Renderiza exatamente as colunas (headers) e linhas (rows) recebidas da planilha,
+// sem o esquema fixo de 9 colunas. Mesmo visual da SheetBoardDisplay.
+export function GoogleSheetDisplay({ boardTitle, headers = [], rows = [], logoSrc, titleStyle: rawTitleStyle }) {
+  const titleStyle = rawTitleStyle ?? {};
+  const colCount = headers.length;
+  const gridTemplate = colCount > 0 ? `repeat(${colCount}, 1fr)` : '1fr';
+
+  const count = rows.length || 1;
+  let cellSize, headSize, rowPad;
+  if (count <= 6) {
+    cellSize = '1.15vw'; headSize = '1.0vw'; rowPad = '0.7vw 0.6vw';
+  } else if (count <= 10) {
+    cellSize = '0.95vw'; headSize = '0.85vw'; rowPad = '0.5vw 0.55vw';
+  } else if (count <= 14) {
+    cellSize = '0.82vw'; headSize = '0.75vw'; rowPad = '0.38vw 0.5vw';
+  } else {
+    cellSize = '0.72vw'; headSize = '0.68vw'; rowPad = '0.3vw 0.45vw';
+  }
+
+  const resolvedTitleFontFamily = titleStyle.fontFamily
+    ? `'${titleStyle.fontFamily}', sans-serif`
+    : "'Aptos', 'Montserrat', sans-serif";
+
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      display: 'flex', flexDirection: 'column',
+      backgroundColor: '#fff', position: 'relative',
+      fontFamily: "'Aptos', 'Montserrat', sans-serif",
+    }}>
+      <div style={{ borderBottom: '2px solid #E5E7EB', padding: '1.4vw 3vw 1vw', textAlign: 'center' }}>
+        <span style={{
+          fontSize: (titleStyle.fontSize && titleStyle.fontSize !== 'auto') ? titleStyle.fontSize : '2.2vw',
+          fontWeight: titleStyle.fontWeight ?? 800,
+          color: titleStyle.color || '#00358E',
+          textTransform: titleStyle.textTransform || 'uppercase',
+          letterSpacing: '0.03em',
+          fontFamily: resolvedTitleFontFamily,
+        }}>
+          {boardTitle}
+        </span>
+      </div>
+
+      <div style={{ flex: 1, overflow: 'hidden', padding: '1.2vw 2.2vw' }}>
+        {colCount > 0 ? (
+          <div style={{ border: '1px solid #1F2937', borderRadius: '4px', overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: gridTemplate }}>
+              {headers.map((h, i) => (
+                <div key={i} style={{
+                  fontSize: headSize, fontWeight: 800, color: '#00358E',
+                  textAlign: 'center', padding: rowPad,
+                  borderBottom: '1px solid #1F2937',
+                  borderRight: i < colCount - 1 ? '1px solid #1F2937' : 'none',
+                  background: '#EAF1FB',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  lineHeight: 1.15, textTransform: 'uppercase',
+                }}>
+                  {h}
+                </div>
+              ))}
+            </div>
+
+            {rows.map((row, ri) => (
+              <div key={ri} style={{ display: 'grid', gridTemplateColumns: gridTemplate }}>
+                {headers.map((_, ci) => (
+                  <div key={ci} style={{
+                    fontSize: cellSize, fontWeight: 500, color: '#1F2937',
+                    textAlign: 'center', padding: rowPad,
+                    borderBottom: ri < rows.length - 1 ? '1px solid #1F2937' : 'none',
+                    borderRight: ci < colCount - 1 ? '1px solid #1F2937' : 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.2,
+                  }}>
+                    {row[ci] ?? ''}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ color: '#9CA3AF', fontSize: '1.6vw', textAlign: 'center', padding: '4vw 0' }}>
+            Nenhum dado da planilha
+          </div>
+        )}
+      </div>
+
+      {logoSrc && (
+        <div style={{ position: 'absolute', bottom: '1.2vw', right: '1.8vw', pointerEvents: 'none', userSelect: 'none' }}>
+          <img src={logoSrc} alt="Logo" style={{ height: '3vw', width: 'auto', objectFit: 'contain' }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── EDITOR ──────────────────────────────────────────────────────────────────
 export default function SheetBoard({ initialRows = [], initialHeaders = {}, onUpdate, onHeadersUpdate }) {
   const [rows, setRows] = useState(() => (initialRows.length > 0 ? initialRows : [emptyRow()]));

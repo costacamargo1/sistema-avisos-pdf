@@ -10,12 +10,14 @@ import {
 import Whiteboard from '../../components/Whiteboard';
 import StructuredBoard from '../../components/StructuredBoard';
 import SheetBoard from '../../components/SheetBoard';
+import GoogleSheetSync from '../../components/GoogleSheetSync';
 
 const BASE_MODE_OPTIONS = [
   { value: 'structured', label: 'Lista estruturada' },
   { value: 'rich', label: 'Editor livre' },
 ];
 const SHEET_MODE_OPTION = { value: 'sheet', label: 'Planilha' };
+const GOOGLE_MODE_OPTION = { value: 'google', label: 'Sincronizar com Google' };
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
@@ -95,6 +97,7 @@ export default function QuadroPage() {
             structuredItems: board.structuredItems || [],
             sheetItems: board.sheetItems || [],
             sheetHeaders: board.sheetHeaders || {},
+            googleSheetUrl: board.googleSheetUrl || '',
             titleStyle: board.titleStyle || null,
             isMainScreen: Boolean(board?.isMainScreen),
           }));
@@ -166,6 +169,7 @@ export default function QuadroPage() {
       id: generateId(), title: `Quadro ${boards.length + 1}`,
       content: null, isVisible: true, messageMode: false,
       boardMode: 'structured', structuredItems: [], sheetItems: [], sheetHeaders: {},
+      googleSheetUrl: '',
       titleStyle: null,
       isMainScreen: false,
     };
@@ -180,7 +184,7 @@ export default function QuadroPage() {
     if (!confirm('Tem certeza que deseja excluir este quadro?')) return;
     const updated = boards.filter(b => b.id !== id);
     if (updated.length === 0) {
-      const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false, boardMode: 'structured', structuredItems: [], sheetItems: [], sheetHeaders: {}, titleStyle: null, isMainScreen: false };
+      const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false, boardMode: 'structured', structuredItems: [], sheetItems: [], sheetHeaders: {}, googleSheetUrl: '', titleStyle: null, isMainScreen: false };
       updated.push(def);
     }
     saveBoards(updated);
@@ -278,12 +282,17 @@ export default function QuadroPage() {
     saveBoards(boards.map(b => b.id === selectedId ? { ...b, titleStyle: style } : b));
   };
 
+  const updateBoardGoogleSheetUrl = (googleSheetUrl) => {
+    saveBoards(boards.map(b => b.id === selectedId ? { ...b, googleSheetUrl } : b));
+  };
+
   const selectedBoard = boards.find(b => b.id === selectedId);
   const isStructured = selectedBoard?.boardMode === 'structured';
   const isSheet = selectedBoard?.boardMode === 'sheet';
-  // Planilha disponível apenas na categoria Cotação.
+  const isGoogle = selectedBoard?.boardMode === 'google';
+  // Planilha e Sincronização com Google disponíveis apenas na categoria Cotação.
   const modeOptions = category === 'cotacao'
-    ? [...BASE_MODE_OPTIONS, SHEET_MODE_OPTION]
+    ? [...BASE_MODE_OPTIONS, SHEET_MODE_OPTION, GOOGLE_MODE_OPTION]
     : BASE_MODE_OPTIONS;
 
   if (loading) {
@@ -460,6 +469,12 @@ export default function QuadroPage() {
                 </div>
               )}
 
+              {isGoogle && !selectedBoard.messageMode && (
+                <div className="flex items-center gap-2 px-3.5 py-2 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700">
+                  <span>Modo sincronizado — a tabela exibida na TV espelha exatamente a planilha do Google (colunas e linhas conforme o Sheets). A TV atualiza a cada 20 minutos.</span>
+                </div>
+              )}
+
               {selectedBoard.messageMode && messageDayInfo?.message && (
                 <div className="flex items-baseline gap-3 bg-blue-50 border border-blue-100 rounded-lg px-3.5 py-2.5 text-[12px] text-blue-800">
                   <span><strong className="font-semibold">Hoje</strong>{' — '}#{messageDayInfo.message.id} {messageDayInfo.message.referencia}</span>
@@ -509,7 +524,15 @@ export default function QuadroPage() {
                   />
                 )}
 
-                {(selectedBoard.messageMode || (!isStructured && !isSheet)) && (
+                {isGoogle && !selectedBoard.messageMode && (
+                  <GoogleSheetSync
+                    key={selectedBoard.id}
+                    initialUrl={selectedBoard.googleSheetUrl || ''}
+                    onUrlChange={updateBoardGoogleSheetUrl}
+                  />
+                )}
+
+                {(selectedBoard.messageMode || (!isStructured && !isSheet && !isGoogle)) && (
                   <Whiteboard
                     key={selectedBoard.id}
                     initialContent={selectedBoard.content}
