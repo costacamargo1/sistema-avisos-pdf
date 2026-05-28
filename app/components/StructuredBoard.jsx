@@ -101,7 +101,7 @@ export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc, titleS
               {/* Main row */}
               <div style={{
                 display: 'flex',
-                alignItems: 'center',
+                alignItems: 'baseline',
                 gap: '0.6vw',
                 lineHeight: 1.3,
                 flexWrap: 'nowrap',
@@ -156,9 +156,8 @@ export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc, titleS
                       fontSize: itemSize,
                       fontWeight: 700,
                       color: '#111827',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
+                      whiteSpace: 'normal',
+                      overflowWrap: 'anywhere',
                       minWidth: 0,
                     }}>
                       {item.action}
