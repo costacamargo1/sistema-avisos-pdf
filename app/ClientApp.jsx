@@ -10,7 +10,12 @@ import {
 import Link from 'next/link';
 import Whiteboard from './components/Whiteboard';
 
-export default function ClientApp() {
+export default function ClientApp({
+  category = 'pregao',
+  pdfEnabled = true,
+  panelLabel = 'Pregão Eletrônico',
+  quadroHref = '/quadro',
+}) {
   const searchParams = useSearchParams();
 
   const [view, setView] = useState('viewer');
@@ -102,7 +107,7 @@ export default function ClientApp() {
 
   const fetchVisibleBoards = useCallback(async () => {
     try {
-      const res = await fetch('/api/whiteboard');
+      const res = await fetch(`/api/whiteboard?category=${category}`);
       const data = await res.json();
       const boards = Array.isArray(data)
         ? data
@@ -111,7 +116,7 @@ export default function ClientApp() {
     } catch {
       return [];
     }
-  }, []);
+  }, [category]);
 
   const startBoardsIfNoPdf = useCallback(async () => {
     const activeBoards = await fetchVisibleBoards();
@@ -229,6 +234,11 @@ export default function ClientApp() {
   }, [pdfDoc, currentPage, scale, renderPage]);
 
   useEffect(() => {
+    if (!pdfEnabled) {
+      // Painel sem PDF (ex.: Cotação): exibe apenas os quadros.
+      startBoardsIfNoPdf();
+      return;
+    }
     (async () => {
       try {
         const res = await fetch('/api/get-pdf', { cache: 'no-store' });
@@ -251,7 +261,7 @@ export default function ClientApp() {
         }
       }
     })();
-  }, [startBoardsIfNoPdf]);
+  }, [startBoardsIfNoPdf, pdfEnabled]);
 
   useEffect(() => {
     const q = searchParams.get('tv');
@@ -582,7 +592,7 @@ export default function ClientApp() {
               <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
             <div>
-              <h1 className="text-sm font-semibold text-gray-900">Avisos Licitação</h1>
+              <h1 className="text-sm font-semibold text-gray-900">Avisos {panelLabel}</h1>
               <p className="text-xs text-gray-500">Grupo FFontana</p>
             </div>
           </div>
@@ -590,10 +600,12 @@ export default function ClientApp() {
           <div className="flex items-center gap-2">
             {!tvMode && (
               <>
-                <button className="btn-secondary" onClick={() => setView('uploader')}>
-                  <Upload className="w-4 h-4" /> <span className="hidden sm:inline">Trocar PDF</span>
-                </button>
-                {hasPdf && (
+                {pdfEnabled && (
+                  <button className="btn-secondary" onClick={() => setView('uploader')}>
+                    <Upload className="w-4 h-4" /> <span className="hidden sm:inline">Trocar PDF</span>
+                  </button>
+                )}
+                {pdfEnabled && hasPdf && (
                   <button
                     className="btn-secondary text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-60"
                     onClick={handleRemovePdf}
@@ -604,13 +616,13 @@ export default function ClientApp() {
                     <span className="hidden sm:inline">{isRemoving ? 'Removendo...' : 'Remover PDF'}</span>
                   </button>
                 )}
-                {pdfUrl && (
+                {pdfEnabled && pdfUrl && (
                   <a className="btn-secondary" href={pdfUrl} target="_blank" rel="noreferrer">
                     <Download className="w-4 h-4" />
                   </a>
                 )}
                 <Link
-                  href="/quadro"
+                  href={quadroHref}
                   className="btn-secondary"
                   title="Editar Quadro"
                 >
@@ -648,7 +660,7 @@ export default function ClientApp() {
           className={`transition-opacity duration-500 absolute inset-0 flex items-center justify-center 
             ${(tvMode && tvPhase === 'pdf') || (!tvMode && view === 'viewer') ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'}`}
         >
-          {!pdfUrl && !tvMode && (
+          {pdfEnabled && !pdfUrl && !tvMode && (
             <div className="text-center animate-enter">
               <p className="text-gray-400 text-lg mb-4">Nenhum PDF em exibição</p>
               <button className="btn" onClick={() => setView('uploader')}>

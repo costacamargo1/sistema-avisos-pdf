@@ -1,0 +1,83 @@
+[
+  {
+    "id": "8g5q5nrwf",
+    "title": "AVISOS X",
+    "content": {
+      "title": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "center"
+            },
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": "Montserrat",
+                      "fontSize": "58px",
+                      "lineHeight": null,
+                      "color": "#00358E"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "AVISOS X"
+              }
+            ]
+          }
+        ]
+      },
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": null
+            },
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": "Aptos",
+                      "fontSize": null,
+                      "lineHeight": null,
+                      "color": null
+                    }
+                  }
+                ],
+                "text": "TESTE XXXX"
+              }
+            ]
+          }
+        ]
+      },
+      "logoLayout": "bottom-right-small",
+      "verticalAlign": "top"
+    },
+    "isVisible": true,
+    "messageMode": false,
+    "boardMode": "rich",
+    "structuredItems": [
+      {
+        "id": "qdi21g2oj",
+        "process": "TESTE",
+        "product": "PAZOPANIBE",
+        "action": "TESTE",
+        "observation": "AINDA AGUARDANDO",
+        "status": "urgente"
+      }
+    ],
+    "titleStyle": null
+  }
+]

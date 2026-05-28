@@ -4,7 +4,23 @@ import path from 'path';
 import { Redis } from '@upstash/redis';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
-const FILE_PATH = path.join(DATA_DIR, 'whiteboard.json');
+
+// Mantém os dados legados em 'pregao' (chaves/arquivo originais) e isola 'cotacao' em chaves próprias.
+function resolveKeys(rawCategory) {
+    const category = rawCategory === 'cotacao' ? 'cotacao' : 'pregao';
+    if (category === 'cotacao') {
+        return {
+            category,
+            redisKey: 'whiteboard_data_cotacao',
+            filePath: path.join(DATA_DIR, 'whiteboard_cotacao.json'),
+        };
+    }
+    return {
+        category,
+        redisKey: 'whiteboard_data',
+        filePath: path.join(DATA_DIR, 'whiteboard.json'),
+    };
+}
 
 // Initialize Redis client safely
 // This allows build/local (where env vars might be missing) to not crash immediately on import
@@ -67,11 +83,14 @@ function getDefaultState() {
     ];
 }
 
-export async function GET() {
+export async function GET(request) {
+    const { searchParams } = new URL(request.url);
+    const { redisKey, filePath } = resolveKeys(searchParams.get('category'));
+
     // 1. Try Upstash Redis (Production/Cloud)
     try {
         if (redis) {
-            const data = await redis.get('whiteboard_data');
+            const data = await redis.get(redisKey);
             if (data) {
                 return NextResponse.json(data);
             }
@@ -85,7 +104,7 @@ export async function GET() {
     try {
         await ensureDir();
         try {
-            const data = await fs.readFile(FILE_PATH, 'utf-8');
+            const data = await fs.readFile(filePath, 'utf-8');
             const json = JSON.parse(data);
 
             // Migration check
@@ -124,6 +143,9 @@ export async function GET() {
 
 export async function POST(request) {
     try {
+        const { searchParams } = new URL(request.url);
+        const { redisKey, filePath } = resolveKeys(searchParams.get('category'));
+
         const content = await request.json();
 
         // Validate format
@@ -141,7 +163,7 @@ export async function POST(request) {
         // 1. Write to Upstash Redis
         if (redis) {
             promises.push(
-                redis.set('whiteboard_data', normalized)
+                redis.set(redisKey, normalized)
                     .catch(() => { /* Ignore Redis errors in dev if partially configured */ })
             );
         }
@@ -151,7 +173,7 @@ export async function POST(request) {
             (async () => {
                 try {
                     await ensureDir();
-                    await fs.writeFile(FILE_PATH, JSON.stringify(normalized, null, 2), 'utf-8');
+                    await fs.writeFile(filePath, JSON.stringify(normalized, null, 2), 'utf-8');
                 } catch (e) {
                     console.error("Local save failed", e);
                 }

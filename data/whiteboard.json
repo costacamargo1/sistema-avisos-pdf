@@ -750,5 +750,60 @@
     "boardMode": "rich",
     "structuredItems": [],
     "titleStyle": null
+  },
+  {
+    "id": "wo2qoek2c",
+    "title": "Quadro 6",
+    "content": {
+      "title": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "center"
+            },
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": "Montserrat",
+                      "fontSize": "58px",
+                      "lineHeight": null,
+                      "color": "#00358E"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "Quadro 6"
+              }
+            ]
+          }
+        ]
+      },
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": null
+            }
+          }
+        ]
+      },
+      "logoLayout": "bottom-right-small",
+      "verticalAlign": "top"
+    },
+    "isVisible": true,
+    "messageMode": false,
+    "boardMode": "rich",
+    "structuredItems": [],
+    "titleStyle": null
   }
 ]
