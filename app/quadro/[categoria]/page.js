@@ -94,6 +94,7 @@ export default function QuadroPage() {
             boardMode: board.boardMode || 'rich',
             structuredItems: board.structuredItems || [],
             sheetItems: board.sheetItems || [],
+            sheetHeaders: board.sheetHeaders || {},
             titleStyle: board.titleStyle || null,
           }));
           setBoards(normalized);
@@ -162,7 +163,7 @@ export default function QuadroPage() {
     const newBoard = {
       id: generateId(), title: `Quadro ${boards.length + 1}`,
       content: null, isVisible: true, messageMode: false,
-      boardMode: 'structured', structuredItems: [], sheetItems: [],
+      boardMode: 'structured', structuredItems: [], sheetItems: [], sheetHeaders: {},
       titleStyle: null,
     };
     const updated = [...boards, newBoard];
@@ -176,7 +177,7 @@ export default function QuadroPage() {
     if (!confirm('Tem certeza que deseja excluir este quadro?')) return;
     const updated = boards.filter(b => b.id !== id);
     if (updated.length === 0) {
-      const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false, boardMode: 'structured', structuredItems: [], sheetItems: [], titleStyle: null };
+      const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false, boardMode: 'structured', structuredItems: [], sheetItems: [], sheetHeaders: {}, titleStyle: null };
       updated.push(def);
     }
     saveBoards(updated);
@@ -250,6 +251,10 @@ export default function QuadroPage() {
 
   const updateBoardSheetItems = (rows) => {
     saveBoards(boards.map(b => b.id === selectedId ? { ...b, sheetItems: rows } : b));
+  };
+
+  const updateBoardSheetHeaders = (sheetHeaders) => {
+    saveBoards(boards.map(b => b.id === selectedId ? { ...b, sheetHeaders } : b));
   };
 
   const updateBoardTitleStyle = (style) => {
@@ -451,7 +456,9 @@ export default function QuadroPage() {
                   <SheetBoard
                     key={selectedBoard.id}
                     initialRows={selectedBoard.sheetItems || []}
+                    initialHeaders={selectedBoard.sheetHeaders || {}}
                     onUpdate={updateBoardSheetItems}
+                    onHeadersUpdate={updateBoardSheetHeaders}
                   />
                 )}
 

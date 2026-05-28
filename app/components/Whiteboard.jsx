@@ -684,7 +684,7 @@ const SmartFormatting = Extension.create({
     },
 });
 
-export default function Whiteboard({ initialContent, onUpdate, readOnly = false, defaultTitleText = 'TITULO', messageMode = false, boardMode = 'rich', structuredItems = [], sheetItems = [], titleStyle = null }) {
+export default function Whiteboard({ initialContent, onUpdate, readOnly = false, defaultTitleText = 'TITULO', messageMode = false, boardMode = 'rich', structuredItems = [], sheetItems = [], sheetHeaders = {}, titleStyle = null }) {
     // Split initial content into title and body
     // Handle both legacy (direct content) and new ({title, body}) structures
     const [titleContent, setTitleContent] = useState(() => {
@@ -952,6 +952,7 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false,
                 <SheetBoardDisplay
                     boardTitle={defaultTitleText}
                     rows={sheetItems}
+                    headers={sheetHeaders}
                     logoSrc="/logogrande.png"
                     titleStyle={titleStyle}
                 />

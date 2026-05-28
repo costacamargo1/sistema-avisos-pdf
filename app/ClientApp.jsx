@@ -694,6 +694,7 @@ export default function ClientApp({
               boardMode={currentBoard.boardMode || 'rich'}
               structuredItems={currentBoard.structuredItems || []}
               sheetItems={currentBoard.sheetItems || []}
+              sheetHeaders={currentBoard.sheetHeaders || {}}
               defaultTitleText={currentBoard.title || ''}
               titleStyle={currentBoard.titleStyle || null}
               readOnly={true}
