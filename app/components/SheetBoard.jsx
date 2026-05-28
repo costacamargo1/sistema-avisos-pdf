@@ -200,21 +200,61 @@ export function SheetBoardDisplay({ boardTitle, rows = [], headers = {}, logoSrc
 // ─── TV DISPLAY — ESPELHO LIVRE DO GOOGLE SHEETS ───────────────────────────────
 // Renderiza exatamente as colunas (headers) e linhas (rows) recebidas da planilha,
 // sem o esquema fixo de 9 colunas. Mesmo visual da SheetBoardDisplay.
+// Normaliza o nome do cabeçalho p/ casar regras (sem acento, sem pontuação, minúsculo).
+function normalizeHeader(label) {
+  return String(label ?? '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+// Regras fixas de cor/peso por coluna, casadas pelo nome do cabeçalho.
+// Mesma identidade visual do modo Planilha manual.
+function freeColumnStyle(headerLabel) {
+  const key = normalizeHeader(headerLabel);
+  if (key === 'orgao' || key === 'pregao') return { color: '#1F2937', bold: true };
+  if (key === 'ri') return { color: '#B91C1C', bold: true };
+  if (key === 'retorno') return { color: '#B91C1C', bold: false };
+  return { color: '#1F2937', bold: false };
+}
+
+// Largura relativa de cada coluna no espelho livre, calculada pelo conteúdo.
+// Considera o maior texto entre cabeçalho e células daquela coluna.
+function freeColumnFlex(headers, rows, colIndex) {
+  let longest = String(headers[colIndex] ?? '').trim().length;
+  for (const row of rows) {
+    const len = String(row?.[colIndex] ?? '').trim().length;
+    if (len > longest) longest = len;
+  }
+  if (longest === 0) return 0.7;
+  if (longest >= 80) return 3.0;
+  if (longest >= 56) return 2.6;
+  if (longest >= 36) return 2.2;
+  if (longest >= 22) return 1.7;
+  if (longest >= 14) return 1.3;
+  if (longest >= 8) return 1.0;
+  return 0.8;
+}
+
 export function GoogleSheetDisplay({ boardTitle, headers = [], rows = [], logoSrc, titleStyle: rawTitleStyle }) {
   const titleStyle = rawTitleStyle ?? {};
   const colCount = headers.length;
-  const gridTemplate = colCount > 0 ? `repeat(${colCount}, 1fr)` : '1fr';
+  const gridTemplate = colCount > 0
+    ? headers.map((_, i) => `${freeColumnFlex(headers, rows, i)}fr`).join(' ')
+    : '1fr';
 
+  // Escala a fonte conforme o nº de linhas para caber sem rolar na TV.
   const count = rows.length || 1;
   let cellSize, headSize, rowPad;
   if (count <= 6) {
-    cellSize = '1.15vw'; headSize = '1.0vw'; rowPad = '0.7vw 0.6vw';
+    cellSize = '1.1vw'; headSize = '0.95vw'; rowPad = '0.6vw 0.55vw';
   } else if (count <= 10) {
-    cellSize = '0.95vw'; headSize = '0.85vw'; rowPad = '0.5vw 0.55vw';
+    cellSize = '0.9vw'; headSize = '0.82vw'; rowPad = '0.42vw 0.5vw';
   } else if (count <= 14) {
-    cellSize = '0.82vw'; headSize = '0.75vw'; rowPad = '0.38vw 0.5vw';
+    cellSize = '0.75vw'; headSize = '0.72vw'; rowPad = '0.3vw 0.45vw';
+  } else if (count <= 18) {
+    cellSize = '0.64vw'; headSize = '0.64vw'; rowPad = '0.22vw 0.4vw';
   } else {
-    cellSize = '0.72vw'; headSize = '0.68vw'; rowPad = '0.3vw 0.45vw';
+    cellSize = '0.56vw'; headSize = '0.58vw'; rowPad = '0.16vw 0.35vw';
   }
 
   const resolvedTitleFontFamily = titleStyle.fontFamily
@@ -262,18 +302,25 @@ export function GoogleSheetDisplay({ boardTitle, headers = [], rows = [], logoSr
 
             {rows.map((row, ri) => (
               <div key={ri} style={{ display: 'grid', gridTemplateColumns: gridTemplate }}>
-                {headers.map((_, ci) => (
-                  <div key={ci} style={{
-                    fontSize: cellSize, fontWeight: 500, color: '#1F2937',
-                    textAlign: 'center', padding: rowPad,
-                    borderBottom: ri < rows.length - 1 ? '1px solid #1F2937' : 'none',
-                    borderRight: ci < colCount - 1 ? '1px solid #1F2937' : 'none',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.2,
-                  }}>
-                    {row[ci] ?? ''}
-                  </div>
-                ))}
+                {headers.map((h, ci) => {
+                  const wide = freeColumnFlex(headers, rows, ci) >= 1.7;
+                  const colStyle = freeColumnStyle(h);
+                  return (
+                    <div key={ci} style={{
+                      fontSize: cellSize,
+                      fontWeight: colStyle.bold ? 800 : 500,
+                      color: colStyle.color,
+                      textAlign: wide ? 'left' : 'center', padding: rowPad,
+                      borderBottom: ri < rows.length - 1 ? '1px solid #1F2937' : 'none',
+                      borderRight: ci < colCount - 1 ? '1px solid #1F2937' : 'none',
+                      display: 'flex', alignItems: 'center',
+                      justifyContent: wide ? 'flex-start' : 'center',
+                      whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.2,
+                    }}>
+                      {row[ci] ?? ''}
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>

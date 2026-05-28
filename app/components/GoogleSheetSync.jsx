@@ -60,10 +60,10 @@ export default function GoogleSheetSync({ initialUrl = '', onUrlChange }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* URL bar */}
+      {/* URL bar — padding extra no topo p/ não colidir com os badges flutuantes do quadro */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: '8px',
-        padding: '12px 16px',
+        padding: '48px 16px 12px',
         borderBottom: '0.5px solid var(--color-border-tertiary)',
         background: 'var(--color-background-secondary)',
       }}>

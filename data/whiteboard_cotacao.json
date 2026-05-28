@@ -2,10 +2,55 @@
   {
     "id": "09ogzlctk",
     "title": "Quadro 1",
-    "content": null,
+    "content": {
+      "title": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "center"
+            },
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": "Montserrat",
+                      "fontSize": "58px",
+                      "lineHeight": null,
+                      "color": "#00358E"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "Quadro 1"
+              }
+            ]
+          }
+        ]
+      },
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": null
+            }
+          }
+        ]
+      },
+      "logoLayout": "bottom-right-small",
+      "verticalAlign": "top"
+    },
     "isVisible": true,
     "messageMode": false,
-    "boardMode": "sheet",
+    "boardMode": "google",
     "structuredItems": [],
     "titleStyle": null,
     "sheetHeaders": {
@@ -20,7 +65,7 @@
           "bold": true
         }
       },
-      "orgao": "xd memes",
+      "orgao": "coluna teste",
       "_widths": {
         "orgao": 0.7,
         "pregao": 0.6,
@@ -55,6 +100,8 @@
         "retorno": "",
         "resultado": ""
       }
-    ]
+    ],
+    "isMainScreen": true,
+    "googleSheetUrl": "https://docs.google.com/spreadsheets/d/143ru659QyTLsmtLMRqAU_I6JPEEsShWp93K1nPX-ZOw/edit?gid=1190641501#gid=1190641501"
   }
 ]

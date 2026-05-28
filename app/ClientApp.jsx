@@ -515,6 +515,7 @@ export default function ClientApp({
       setUiVisible(true);
       document.body.classList.remove('cursor-hidden');
       setTvPhase('pdf'); // Reset phase when exiting TV
+      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
 
       // Re-fit normal quando sai do modo TV
       const applyFitNormal = async () => {
@@ -668,6 +669,7 @@ export default function ClientApp({
               href={quadroHref}
               className="btn-secondary"
               title="Editar Quadro"
+              onClick={() => { if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {}); }}
             >
               <LayoutTemplate className="w-4 h-4" />
               <span className="hidden sm:inline">Quadro</span>
