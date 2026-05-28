@@ -131,6 +131,12 @@ export default function ClientApp({
     return true;
   }, [fetchVisibleBoards]);
 
+  const goToBoard = useCallback((delta) => {
+    const total = visibleBoards.length;
+    if (total === 0) return;
+    setCurrentBoardIndex(i => (i + delta + total) % total);
+  }, [visibleBoards.length]);
+
   const toggleFullscreen = useCallback(() => {
     const el = document.documentElement;
     if (document.fullscreenElement) document.exitFullscreen?.();
@@ -721,7 +727,7 @@ export default function ClientApp({
           <div className="bg-white/90 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl p-2 flex items-center gap-1 transition-all hover:scale-105 hover:bg-white">
 
             {/* Page Nav */}
-            {hasPdf && (
+            {hasPdf && tvPhase === 'pdf' && (
               <div className="flex items-center gap-1 pr-2 border-r border-gray-200">
                 <button className="btn-ghost p-2 rounded-xl" onClick={() => goTo(currentPage - 1)}>
                   <ChevronLeft className="w-5 h-5" />
@@ -730,6 +736,21 @@ export default function ClientApp({
                   {currentPage} / {totalPages || '-'}
                 </span>
                 <button className="btn-ghost p-2 rounded-xl" onClick={() => goTo(currentPage + 1)}>
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+
+            {/* Board Nav */}
+            {tvMode && tvPhase === 'whiteboard' && visibleBoards.length > 1 && (
+              <div className="flex items-center gap-1 pr-2 border-r border-gray-200">
+                <button className="btn-ghost p-2 rounded-xl" onClick={() => goToBoard(-1)} title="Quadro anterior">
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <span className="text-xs font-medium font-mono min-w-16 text-center text-gray-600">
+                  Quadro {currentBoardIndex + 1}/{visibleBoards.length}
+                </span>
+                <button className="btn-ghost p-2 rounded-xl" onClick={() => goToBoard(1)} title="Próximo quadro">
                   <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
