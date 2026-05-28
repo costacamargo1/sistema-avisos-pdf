@@ -96,6 +96,7 @@ export default function QuadroPage() {
             sheetItems: board.sheetItems || [],
             sheetHeaders: board.sheetHeaders || {},
             titleStyle: board.titleStyle || null,
+            isMainScreen: Boolean(board?.isMainScreen),
           }));
           setBoards(normalized);
           setSelectedId(normalized[0].id);
@@ -105,6 +106,7 @@ export default function QuadroPage() {
             isVisible: true, messageMode: false,
             boardMode: 'structured', structuredItems: [],
             titleStyle: null,
+            isMainScreen: false,
           };
           setBoards([newBoard]);
           setSelectedId(newBoard.id);
@@ -165,6 +167,7 @@ export default function QuadroPage() {
       content: null, isVisible: true, messageMode: false,
       boardMode: 'structured', structuredItems: [], sheetItems: [], sheetHeaders: {},
       titleStyle: null,
+      isMainScreen: false,
     };
     const updated = [...boards, newBoard];
     saveBoards(updated);
@@ -177,7 +180,7 @@ export default function QuadroPage() {
     if (!confirm('Tem certeza que deseja excluir este quadro?')) return;
     const updated = boards.filter(b => b.id !== id);
     if (updated.length === 0) {
-      const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false, boardMode: 'structured', structuredItems: [], sheetItems: [], sheetHeaders: {}, titleStyle: null };
+      const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false, boardMode: 'structured', structuredItems: [], sheetItems: [], sheetHeaders: {}, titleStyle: null, isMainScreen: false };
       updated.push(def);
     }
     saveBoards(updated);
@@ -186,12 +189,26 @@ export default function QuadroPage() {
 
   const toggleVisibility = (id, e) => {
     e?.stopPropagation();
-    saveBoards(boards.map(b => b.id === id ? { ...b, isVisible: !b.isVisible } : b));
+    saveBoards(boards.map(b => {
+      if (b.id !== id) return b;
+      const nextVisible = !b.isVisible;
+      return { ...b, isVisible: nextVisible, isMainScreen: nextVisible ? b.isMainScreen : false };
+    }));
   };
 
   const toggleMessageMode = (id, e) => {
     e?.stopPropagation();
     saveBoards(boards.map(b => b.id === id ? { ...b, messageMode: !b.messageMode } : b));
+  };
+
+  const toggleMainScreen = (id, e) => {
+    e?.stopPropagation();
+    const target = boards.find(b => b.id === id);
+    const willActivate = !target?.isMainScreen;
+    saveBoards(boards.map(b => {
+      if (b.id !== id) return willActivate ? { ...b, isMainScreen: false } : b;
+      return { ...b, isMainScreen: willActivate, isVisible: willActivate ? true : b.isVisible };
+    }));
   };
 
   const setBoardMode = (id, mode) => {
@@ -346,14 +363,22 @@ export default function QuadroPage() {
                     </button>
                     <span className={`text-[10px] font-medium w-4 text-center flex-shrink-0 ${isActive ? 'text-blue-500' : 'text-gray-400'}`}>{index + 1}</span>
                     <span className={`truncate text-[13px] font-medium flex-1 ${isActive ? 'text-gray-900' : 'text-gray-700'}`}>{board.title}</span>
+                    {board.isMainScreen && (
+                      <span className="flex-shrink-0 flex items-center gap-1 text-[10px] font-medium text-blue-600">
+                        <Monitor className="w-3 h-3" />Principal
+                      </span>
+                    )}
                     {board.isVisible && (
                       <span className="flex-shrink-0 flex items-center gap-1 text-[10px] font-medium text-emerald-600">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />Visível
                       </span>
                     )}
                   </div>
-                  {(!board.isVisible || board.messageMode || board.boardMode === 'structured') && (
+                  {(!board.isVisible || board.messageMode || board.boardMode === 'structured' || board.isMainScreen) && (
                     <div className="flex gap-1.5 mt-1.5 pl-[42px] flex-wrap">
+                      {board.isMainScreen && (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">Tela principal</span>
+                      )}
                       {board.boardMode === 'structured' && (
                         <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">Lista</span>
                       )}
@@ -397,6 +422,19 @@ export default function QuadroPage() {
                   <ModeToggle mode={selectedBoard.boardMode || 'rich'} onChange={(mode) => setBoardMode(selectedBoard.id, mode)} options={modeOptions} />
                 )}
                 <button
+                  onClick={() => toggleMainScreen(selectedBoard.id)}
+                  className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium border transition-colors ${
+                    selectedBoard.isMainScreen
+                      ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
+                      : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-gray-700'
+                  }`}
+                  title="Quando ativo, exibe apenas este quadro no painel"
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${selectedBoard.isMainScreen ? 'bg-blue-500' : 'bg-gray-300'}`} />
+                  <Monitor className="w-3.5 h-3.5" />
+                  TELA PRINCIPAL
+                </button>
+                <button
                   onClick={() => toggleMessageMode(selectedBoard.id)}
                   className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium border transition-colors ${
                     selectedBoard.messageMode
@@ -431,6 +469,15 @@ export default function QuadroPage() {
               )}
 
               <div className="flex-1 min-h-0 relative bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                {selectedBoard.isMainScreen && (
+                  <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full border bg-blue-50 text-blue-700 border-blue-200">
+                    <Monitor className="w-3 h-3" />
+                    Tela principal
+                    <button onClick={(e) => toggleMainScreen(selectedBoard.id, e)} className="ml-1 text-[10px] underline underline-offset-2 opacity-70 hover:opacity-100 transition-opacity">
+                      Desativar
+                    </button>
+                  </div>
+                )}
                 <div className={`absolute top-3 right-3 z-10 flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full border ${
                   selectedBoard.isVisible ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-500 border-gray-200'
                 }`}>

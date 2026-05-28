@@ -112,7 +112,9 @@ export default function ClientApp({
       const boards = Array.isArray(data)
         ? data
         : (data.content ? [{ ...data, isVisible: data.isVisible ?? true }] : []);
-      return boards.filter(board => board?.isVisible !== false);
+      const visibleBoards = boards.filter(board => board?.isVisible !== false);
+      const mainScreenBoard = visibleBoards.find(board => board?.isMainScreen === true);
+      return mainScreenBoard ? [mainScreenBoard] : visibleBoards;
     } catch {
       return [];
     }
@@ -320,13 +322,19 @@ export default function ClientApp({
 
     const runLoop = async () => {
       if (tvPhase === 'pdf') {
+        const activeBoards = await fetchVisibleBoards();
+        if (activeBoards[0]?.isMainScreen) {
+          setVisibleBoards(activeBoards);
+          setCurrentBoardIndex(0);
+          setTvPhase('whiteboard');
+          return;
+        }
+
         if (!pdfDoc || totalPages === 0) {
           // If no PDF, check for boards immediately
           try {
-            const active = await fetchVisibleBoards();
-
-            if (active.length > 0) {
-              setVisibleBoards(active);
+            if (activeBoards.length > 0) {
+              setVisibleBoards(activeBoards);
               setCurrentBoardIndex(0);
               setTvPhase('whiteboard');
             }
@@ -340,10 +348,8 @@ export default function ClientApp({
         } else {
           // Finished PDF, check for boards
           try {
-            const active = await fetchVisibleBoards();
-
-            if (active.length > 0) {
-              setVisibleBoards(active);
+            if (activeBoards.length > 0) {
+              setVisibleBoards(activeBoards);
               setCurrentBoardIndex(0);
               setTvPhase('whiteboard');
             } else {
@@ -358,6 +364,11 @@ export default function ClientApp({
         // We need to check if valid boards still exist
         const activeBoards = await fetchVisibleBoards();
         setVisibleBoards(activeBoards);
+
+        if (activeBoards[0]?.isMainScreen) {
+          setCurrentBoardIndex(0);
+          return;
+        }
 
         if (activeBoards.length === 0) {
           // No boards visible

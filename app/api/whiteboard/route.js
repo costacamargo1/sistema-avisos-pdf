@@ -79,6 +79,7 @@ function getDefaultState() {
             },
             isVisible: true,
             messageMode: false,
+            isMainScreen: false,
         }
     ];
 }
@@ -121,12 +122,14 @@ export async function GET(request) {
                     content,
                     isVisible,
                     messageMode: false,
+                    isMainScreen: false,
                 }];
                 return NextResponse.json(migrated);
             }
             const normalized = json.map((board) => ({
                 ...board,
                 messageMode: Boolean(board?.messageMode),
+                isMainScreen: Boolean(board?.isMainScreen),
             }));
             return NextResponse.json(normalized);
         } catch (error) {
@@ -156,6 +159,7 @@ export async function POST(request) {
         const normalized = content.map((board) => ({
             ...board,
             messageMode: Boolean(board?.messageMode),
+            isMainScreen: Boolean(board?.isMainScreen),
         }));
 
         const promises = [];
