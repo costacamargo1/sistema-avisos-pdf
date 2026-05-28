@@ -1,6 +1,7 @@
 'use client';
 
 import { StructuredBoardDisplay } from './StructuredBoard';
+import { SheetBoardDisplay } from './SheetBoard';
 import { useEditor, EditorContent, Extension } from '@tiptap/react';
 import { mergeAttributes } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
@@ -683,7 +684,7 @@ const SmartFormatting = Extension.create({
     },
 });
 
-export default function Whiteboard({ initialContent, onUpdate, readOnly = false, defaultTitleText = 'TITULO', messageMode = false, boardMode = 'rich', structuredItems = [], titleStyle = null }) {
+export default function Whiteboard({ initialContent, onUpdate, readOnly = false, defaultTitleText = 'TITULO', messageMode = false, boardMode = 'rich', structuredItems = [], sheetItems = [], titleStyle = null }) {
     // Split initial content into title and body
     // Handle both legacy (direct content) and new ({title, body}) structures
     const [titleContent, setTitleContent] = useState(() => {
@@ -937,6 +938,20 @@ export default function Whiteboard({ initialContent, onUpdate, readOnly = false,
                 <StructuredBoardDisplay
                     boardTitle={defaultTitleText}
                     items={structuredItems}
+                    logoSrc="/logogrande.png"
+                    titleStyle={titleStyle}
+                />
+            </div>
+        );
+    }
+
+    // Sheet (planilha) TV display
+    if (readOnly && boardMode === 'sheet') {
+        return (
+            <div style={{ width: '100%', height: '100%' }}>
+                <SheetBoardDisplay
+                    boardTitle={defaultTitleText}
+                    rows={sheetItems}
                     logoSrc="/logogrande.png"
                     titleStyle={titleStyle}
                 />

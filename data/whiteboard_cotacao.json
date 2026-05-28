@@ -67,7 +67,7 @@
     },
     "isVisible": true,
     "messageMode": false,
-    "boardMode": "structured",
+    "boardMode": "sheet",
     "structuredItems": [
       {
         "id": "qdi21g2oj",
@@ -78,6 +78,20 @@
         "status": "urgente"
       }
     ],
-    "titleStyle": null
+    "titleStyle": null,
+    "sheetItems": [
+      {
+        "id": "dqkm7966o",
+        "orgao": "SEPLAG",
+        "pregao": "90/2026",
+        "abertura": "26/05/2026",
+        "prazo": "28/06/2026",
+        "produto": "TODOS.",
+        "acao": "RESULTADO COMPLETO DO PROCESSO",
+        "ri": "RAFAEL",
+        "retorno": "",
+        "resultado": ""
+      }
+    ]
   }
 ]

@@ -9,6 +9,13 @@ import {
 } from 'lucide-react';
 import Whiteboard from '../../components/Whiteboard';
 import StructuredBoard from '../../components/StructuredBoard';
+import SheetBoard from '../../components/SheetBoard';
+
+const BASE_MODE_OPTIONS = [
+  { value: 'structured', label: 'Lista estruturada' },
+  { value: 'rich', label: 'Editor livre' },
+];
+const SHEET_MODE_OPTION = { value: 'sheet', label: 'Planilha' };
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
@@ -30,40 +37,32 @@ const getTitleFromBoardContent = (content, fallbackTitle) => {
   return parsed || fallbackTitle;
 };
 
-function ModeToggle({ mode, onChange }) {
-  const isStructured = mode === 'structured';
+function ModeToggle({ mode, onChange, options }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: '2px',
       background: '#F3F4F6', border: '0.5px solid #E5E7EB',
       borderRadius: '20px', padding: '2px',
     }}>
-      <button
-        onClick={() => onChange('structured')}
-        style={{
-          display: 'flex', alignItems: 'center', gap: '5px',
-          padding: '4px 12px', borderRadius: '20px', border: 'none', cursor: 'pointer',
-          fontSize: '11px', fontWeight: 500,
-          background: isStructured ? '#00358E' : 'none',
-          color: isStructured ? '#fff' : '#6B7280',
-          transition: 'all 0.15s',
-        }}
-      >
-        Lista estruturada
-      </button>
-      <button
-        onClick={() => onChange('rich')}
-        style={{
-          display: 'flex', alignItems: 'center', gap: '5px',
-          padding: '4px 12px', borderRadius: '20px', border: 'none', cursor: 'pointer',
-          fontSize: '11px', fontWeight: 500,
-          background: !isStructured ? '#00358E' : 'none',
-          color: !isStructured ? '#fff' : '#6B7280',
-          transition: 'all 0.15s',
-        }}
-      >
-        Editor livre
-      </button>
+      {options.map(opt => {
+        const active = mode === opt.value;
+        return (
+          <button
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '5px',
+              padding: '4px 12px', borderRadius: '20px', border: 'none', cursor: 'pointer',
+              fontSize: '11px', fontWeight: 500,
+              background: active ? '#00358E' : 'none',
+              color: active ? '#fff' : '#6B7280',
+              transition: 'all 0.15s',
+            }}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -94,6 +93,7 @@ export default function QuadroPage() {
             messageMode: Boolean(board?.messageMode),
             boardMode: board.boardMode || 'rich',
             structuredItems: board.structuredItems || [],
+            sheetItems: board.sheetItems || [],
             titleStyle: board.titleStyle || null,
           }));
           setBoards(normalized);
@@ -162,7 +162,7 @@ export default function QuadroPage() {
     const newBoard = {
       id: generateId(), title: `Quadro ${boards.length + 1}`,
       content: null, isVisible: true, messageMode: false,
-      boardMode: 'structured', structuredItems: [],
+      boardMode: 'structured', structuredItems: [], sheetItems: [],
       titleStyle: null,
     };
     const updated = [...boards, newBoard];
@@ -176,7 +176,7 @@ export default function QuadroPage() {
     if (!confirm('Tem certeza que deseja excluir este quadro?')) return;
     const updated = boards.filter(b => b.id !== id);
     if (updated.length === 0) {
-      const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false, boardMode: 'structured', structuredItems: [], titleStyle: null };
+      const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false, boardMode: 'structured', structuredItems: [], sheetItems: [], titleStyle: null };
       updated.push(def);
     }
     saveBoards(updated);
@@ -248,12 +248,21 @@ export default function QuadroPage() {
     saveBoards(boards.map(b => b.id === selectedId ? { ...b, structuredItems: items } : b));
   };
 
+  const updateBoardSheetItems = (rows) => {
+    saveBoards(boards.map(b => b.id === selectedId ? { ...b, sheetItems: rows } : b));
+  };
+
   const updateBoardTitleStyle = (style) => {
     saveBoards(boards.map(b => b.id === selectedId ? { ...b, titleStyle: style } : b));
   };
 
   const selectedBoard = boards.find(b => b.id === selectedId);
   const isStructured = selectedBoard?.boardMode === 'structured';
+  const isSheet = selectedBoard?.boardMode === 'sheet';
+  // Planilha disponível apenas na categoria Cotação.
+  const modeOptions = category === 'cotacao'
+    ? [...BASE_MODE_OPTIONS, SHEET_MODE_OPTION]
+    : BASE_MODE_OPTIONS;
 
   if (loading) {
     return (
@@ -380,7 +389,7 @@ export default function QuadroPage() {
                   placeholder="Título do quadro"
                 />
                 {!selectedBoard.messageMode && (
-                  <ModeToggle mode={selectedBoard.boardMode || 'rich'} onChange={(mode) => setBoardMode(selectedBoard.id, mode)} />
+                  <ModeToggle mode={selectedBoard.boardMode || 'rich'} onChange={(mode) => setBoardMode(selectedBoard.id, mode)} options={modeOptions} />
                 )}
                 <button
                   onClick={() => toggleMessageMode(selectedBoard.id)}
@@ -399,6 +408,12 @@ export default function QuadroPage() {
               {isStructured && !selectedBoard.messageMode && (
                 <div className="flex items-center gap-2 px-3.5 py-2 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700">
                   <span>Modo lista estruturada — formatado automaticamente na TV. Campos: <strong>Processo/Tarefa</strong> (azul) · <strong>Produto</strong> (laranja) · <strong>Ação</strong> (preto) · <strong>Status</strong>.</span>
+                </div>
+              )}
+
+              {isSheet && !selectedBoard.messageMode && (
+                <div className="flex items-center gap-2 px-3.5 py-2 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700">
+                  <span>Modo planilha — tabela de Controle de Ações exibida na TV. Colunas fixas: <strong>Órgão · Pregão · Abertura · Prazo · Produto · Ação · R.I · Retorno · Resultado do Processo</strong>.</span>
                 </div>
               )}
 
@@ -432,7 +447,15 @@ export default function QuadroPage() {
                   />
                 )}
 
-                {(!isStructured || selectedBoard.messageMode) && (
+                {isSheet && !selectedBoard.messageMode && (
+                  <SheetBoard
+                    key={selectedBoard.id}
+                    initialRows={selectedBoard.sheetItems || []}
+                    onUpdate={updateBoardSheetItems}
+                  />
+                )}
+
+                {(selectedBoard.messageMode || (!isStructured && !isSheet)) && (
                   <Whiteboard
                     key={selectedBoard.id}
                     initialContent={selectedBoard.content}

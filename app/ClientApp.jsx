@@ -693,6 +693,7 @@ export default function ClientApp({
               messageMode={Boolean(currentBoard.messageMode)}
               boardMode={currentBoard.boardMode || 'rich'}
               structuredItems={currentBoard.structuredItems || []}
+              sheetItems={currentBoard.sheetItems || []}
               defaultTitleText={currentBoard.title || ''}
               titleStyle={currentBoard.titleStyle || null}
               readOnly={true}
