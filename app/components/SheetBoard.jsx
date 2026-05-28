@@ -5,7 +5,7 @@ import { Plus, Trash2, ChevronUp, ChevronDown, Bold } from 'lucide-react';
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
-// Paleta de cores para formatação por célula (mesma identidade da lista estruturada).
+// Paleta de cores para formatacao de coluna (mesma identidade da lista estruturada).
 const CELL_COLOR_PRESETS = [
   { value: '', label: 'Padrão' },
   { value: '#00358E', label: 'Azul' },
@@ -16,8 +16,8 @@ const CELL_COLOR_PRESETS = [
   { value: '#9333EA', label: 'Roxo' },
 ];
 
-// Formatação fica em row._fmt[colKey] = { color, bold } — separada do texto (row[colKey]).
-const getCellFmt = (row, key) => (row?._fmt?.[key]) || {};
+// Formatacao de coluna fica em headers._fmt[colKey] = { color, bold }.
+const getColumnFmt = (headers, key) => (headers?._fmt?.[key]) || {};
 
 const CELL_INPUT_STYLE = {
   width: '100%', fontSize: '12px', fontFamily: 'var(--font-sans)',
@@ -44,26 +44,29 @@ const COLUMNS = [
 const emptyRow = () =>
   COLUMNS.reduce((acc, c) => ({ ...acc, [c.key]: '' }), { id: generateId() });
 
-const colHasContent = (rows, key) => rows.some(r => String(r[key] || '').trim());
-
 const resolveHeaderLabel = (headers, col) => {
-  const custom = headers?.[col.key];
-  return (typeof custom === 'string' && custom.trim()) ? custom : col.label;
+  const value = headers?.[col.key];
+  return typeof value === 'string' ? value.trim() : '';
 };
+
+const headerHasContent = (headers, col) => Boolean(resolveHeaderLabel(headers, col));
 
 const gridTemplateFor = (cols) => cols.map(c => `${c.flex}fr`).join(' ');
 
 // ─── TV DISPLAY ──────────────────────────────────────────────────────────────
 export function SheetBoardDisplay({ boardTitle, rows = [], headers = {}, logoSrc, titleStyle: rawTitleStyle }) {
   const titleStyle = rawTitleStyle ?? {};
-  const validRows = rows.filter(row => COLUMNS.some(c => String(row[c.key] || '').trim()));
 
-  // Mostra apenas as colunas que têm conteúdo em alguma linha.
-  const visibleCols = COLUMNS.filter(c => colHasContent(validRows, c.key));
+  // Coluna aparece no quadro quando o cabecalho esta preenchido.
+  const visibleCols = COLUMNS.filter(c => headerHasContent(headers, c));
+  const rowsWithContent = rows.filter(row => visibleCols.some(c => String(row[c.key] || '').trim()));
+  const displayRows = rowsWithContent.length > 0
+    ? rowsWithContent
+    : (visibleCols.length > 0 ? (rows.length > 0 ? rows : [{ id: 'empty-display-row' }]) : []);
   const gridTemplate = gridTemplateFor(visibleCols);
 
   // Escala a fonte conforme o número de linhas para evitar transbordo na TV.
-  const count = validRows.length;
+  const count = displayRows.length;
   let cellSize, headSize, rowPad;
   if (count <= 6) {
     cellSize = '1.15vw'; headSize = '1.0vw'; rowPad = '0.7vw 0.6vw';
@@ -122,20 +125,20 @@ export function SheetBoardDisplay({ boardTitle, rows = [], headers = {}, logoSrc
             </div>
 
             {/* Data rows */}
-            {validRows.map((row, ri) => (
+            {displayRows.map((row, ri) => (
               <div key={row.id} style={{ display: 'grid', gridTemplateColumns: gridTemplate }}>
                 {visibleCols.map((c, ci) => {
-                  const fmt = getCellFmt(row, c.key);
+                  const columnFmt = getColumnFmt(headers, c.key);
                   const defaultBold = c.key === 'orgao' || c.key === 'pregao';
                   const defaultColor = c.key === 'ri' || c.key === 'retorno' ? '#B91C1C' : '#1F2937';
                   return (
                     <div key={c.key} style={{
                       fontSize: cellSize,
-                      fontWeight: fmt.bold ? 800 : (defaultBold ? 700 : 500),
-                      color: fmt.color || defaultColor,
+                      fontWeight: columnFmt.bold ? 800 : (defaultBold ? 700 : 500),
+                      color: columnFmt.color || defaultColor,
                       textAlign: c.key === 'acao' || c.key === 'produto' || c.key === 'resultado' ? 'left' : 'center',
                       padding: rowPad,
-                      borderBottom: ri < validRows.length - 1 ? '1px solid #1F2937' : 'none',
+                      borderBottom: ri < displayRows.length - 1 ? '1px solid #1F2937' : 'none',
                       borderRight: ci < visibleCols.length - 1 ? '1px solid #1F2937' : 'none',
                       display: 'flex', alignItems: 'center',
                       justifyContent: c.key === 'acao' || c.key === 'produto' || c.key === 'resultado' ? 'flex-start' : 'center',
@@ -150,7 +153,7 @@ export function SheetBoardDisplay({ boardTitle, rows = [], headers = {}, logoSrc
           </div>
         )}
 
-        {validRows.length === 0 && (
+        {visibleCols.length === 0 && (
           <div style={{ color: '#9CA3AF', fontSize: '1.6vw', textAlign: 'center', padding: '4vw 0' }}>
             Nenhuma linha cadastrada
           </div>
@@ -179,32 +182,37 @@ export default function SheetBoard({ initialRows = [], initialHeaders = {}, onUp
     saveTimer.current = setTimeout(() => onUpdate?.(newRows), 400);
   };
 
-  const updateHeader = (key, value) => {
-    const next = { ...headers, [key]: value };
+  const saveHeaders = (next) => {
     setHeaders(next);
     if (headerTimer.current) clearTimeout(headerTimer.current);
     headerTimer.current = setTimeout(() => onHeadersUpdate?.(next), 400);
+  };
+
+  const updateHeader = (key, value) => {
+    saveHeaders({ ...headers, [key]: value });
+  };
+
+  const updateColumnFmt = (key, patch) => {
+    const prevFmt = headers._fmt || {};
+    const nextColumn = { ...(prevFmt[key] || {}), ...patch };
+    if (!nextColumn.color) delete nextColumn.color;
+    if (!nextColumn.bold) delete nextColumn.bold;
+
+    const nextFmt = { ...prevFmt };
+    if (Object.keys(nextColumn).length === 0) delete nextFmt[key];
+    else nextFmt[key] = nextColumn;
+
+    const next = { ...headers };
+    if (Object.keys(nextFmt).length === 0) delete next._fmt;
+    else next._fmt = nextFmt;
+
+    saveHeaders(next);
   };
 
   const addRow = () => save([...rows, emptyRow()]);
 
   const updateCell = (id, key, value) => {
     save(rows.map(r => (r.id === id ? { ...r, [key]: value } : r)));
-  };
-
-  const updateCellFmt = (id, key, patch) => {
-    save(rows.map(r => {
-      if (r.id !== id) return r;
-      const prevFmt = r._fmt || {};
-      const nextCell = { ...(prevFmt[key] || {}), ...patch };
-      // Remove chaves "vazias" para não inflar o objeto persistido.
-      if (!nextCell.color) delete nextCell.color;
-      if (!nextCell.bold) delete nextCell.bold;
-      const nextFmt = { ...prevFmt };
-      if (Object.keys(nextCell).length === 0) delete nextFmt[key];
-      else nextFmt[key] = nextCell;
-      return { ...r, _fmt: nextFmt };
-    }));
   };
 
   const removeRow = (id) => {
@@ -236,25 +244,21 @@ export default function SheetBoard({ initialRows = [], initialHeaders = {}, onUp
         background: 'var(--color-background-secondary)',
       }}>
         <div style={{ fontSize: '10px', fontWeight: 500, color: 'var(--color-text-tertiary)', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>#</div>
-        {COLUMNS.map(c => (
-          <input
-            key={c.key}
-            value={headers[c.key] ?? c.label}
-            onChange={e => updateHeader(c.key, e.target.value)}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            placeholder={c.label}
-            title="Renomear cabeçalho"
-            style={{
-              width: '100%', fontSize: '10px', fontWeight: 700,
-              color: 'var(--color-text-secondary)',
-              textTransform: 'uppercase', letterSpacing: '0.04em',
-              background: 'none', border: 'none',
-              borderBottom: '0.5px solid transparent', outline: 'none',
-              padding: '2px 2px', transition: 'border-color 0.15s',
-            }}
-          />
-        ))}
+        {COLUMNS.map((c, index) => {
+          const columnPlaceholder = `Coluna ${index + 1}`;
+          return (
+            <HeaderEditor
+              key={c.key}
+              value={headers[c.key] ?? ''}
+              placeholder={columnPlaceholder}
+              columnFmt={getColumnFmt(headers, c.key)}
+              onChange={value => updateHeader(c.key, value)}
+              onFmtChange={patch => updateColumnFmt(c.key, patch)}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+            />
+          );
+        })}
         <div />
       </div>
 
@@ -272,15 +276,14 @@ export default function SheetBoard({ initialRows = [], initialHeaders = {}, onUp
               {idx + 1}
             </div>
 
-            {COLUMNS.map(c => (
+            {COLUMNS.map((c, columnIndex) => (
               <CellEditor
                 key={c.key}
                 column={c}
                 value={row[c.key] || ''}
-                fmt={getCellFmt(row, c.key)}
-                placeholder={headers[c.key] ?? c.label}
+                columnFmt={getColumnFmt(headers, c.key)}
+                placeholder={headers[c.key] || `Coluna ${columnIndex + 1}`}
                 onChange={value => updateCell(row.id, c.key, value)}
-                onFmtChange={patch => updateCellFmt(row.id, c.key, patch)}
               />
             ))}
 
@@ -345,8 +348,7 @@ export default function SheetBoard({ initialRows = [], initialHeaders = {}, onUp
   );
 }
 
-// ─── CELL EDITOR (texto + formatação por célula) ─────────────────────────────
-function CellEditor({ column, value, fmt, placeholder, onChange, onFmtChange }) {
+function HeaderEditor({ value, placeholder, columnFmt, onChange, onFmtChange, onFocus, onBlur }) {
   const [open, setOpen] = useState(false);
   const closeTimer = useRef(null);
 
@@ -354,14 +356,10 @@ function CellEditor({ column, value, fmt, placeholder, onChange, onFmtChange }) 
     if (closeTimer.current) clearTimeout(closeTimer.current);
     setOpen(true);
   };
-  // Pequeno atraso para permitir clicar nos botões da barra antes de fechar.
   const scheduleClose = () => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
     closeTimer.current = setTimeout(() => setOpen(false), 150);
   };
-
-  const defaultBold = column.key === 'orgao' || column.key === 'pregao';
-  const defaultColor = column.key === 'ri' || column.key === 'retorno' ? '#B91C1C' : 'var(--color-text-primary)';
 
   return (
     <div
@@ -372,13 +370,17 @@ function CellEditor({ column, value, fmt, placeholder, onChange, onFmtChange }) 
       <input
         value={value}
         onChange={e => onChange(e.target.value)}
-        onFocus={e => { e.target.style.borderBottomColor = '#00358e'; show(); }}
-        onBlur={e => { e.target.style.borderBottomColor = 'transparent'; scheduleClose(); }}
+        onFocus={e => { onFocus(e); show(); }}
+        onBlur={e => { onBlur(e); scheduleClose(); }}
         placeholder={placeholder}
+        title="Renomear cabecalho"
         style={{
-          ...CELL_INPUT_STYLE,
-          fontWeight: fmt.bold ? 700 : (defaultBold ? 600 : 400),
-          color: fmt.color || defaultColor,
+          width: '100%', fontSize: '10px', fontWeight: 700,
+          color: 'var(--color-text-secondary)',
+          textTransform: 'uppercase', letterSpacing: '0.04em',
+          background: 'none', border: 'none',
+          borderBottom: '0.5px solid transparent', outline: 'none',
+          padding: '2px 2px', transition: 'border-color 0.15s',
         }}
       />
 
@@ -395,7 +397,7 @@ function CellEditor({ column, value, fmt, placeholder, onChange, onFmtChange }) 
           }}
         >
           {CELL_COLOR_PRESETS.map(preset => {
-            const active = (fmt.color || '') === preset.value;
+            const active = (columnFmt.color || '') === preset.value;
             const swatch = preset.value || '#9CA3AF';
             return (
               <button
@@ -419,20 +421,42 @@ function CellEditor({ column, value, fmt, placeholder, onChange, onFmtChange }) 
 
           <button
             onMouseDown={e => e.preventDefault()}
-            onClick={() => onFmtChange({ bold: !fmt.bold })}
-            title={fmt.bold ? 'Remover negrito' : 'Aplicar negrito'}
+            onClick={() => onFmtChange({ bold: !columnFmt.bold })}
+            title={columnFmt.bold ? 'Remover negrito da coluna' : 'Aplicar negrito na coluna'}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               width: 24, height: 24, borderRadius: '6px', cursor: 'pointer',
               border: '0.5px solid #D1D5DB',
-              background: fmt.bold ? '#EFF6FF' : '#fff',
-              color: fmt.bold ? '#2563EB' : '#6B7280',
+              background: columnFmt.bold ? '#EFF6FF' : '#fff',
+              color: columnFmt.bold ? '#2563EB' : '#6B7280',
             }}
           >
             <Bold style={{ width: 13, height: 13 }} />
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function CellEditor({ column, value, columnFmt, placeholder, onChange }) {
+  const defaultBold = column.key === 'orgao' || column.key === 'pregao';
+  const defaultColor = column.key === 'ri' || column.key === 'retorno' ? '#B91C1C' : 'var(--color-text-primary)';
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onFocus={e => { e.target.style.borderBottomColor = '#00358e'; }}
+        onBlur={e => { e.target.style.borderBottomColor = 'transparent'; }}
+        placeholder={placeholder}
+        style={{
+          ...CELL_INPUT_STYLE,
+          fontWeight: columnFmt.bold ? 700 : (defaultBold ? 600 : 400),
+          color: columnFmt.color || defaultColor,
+        }}
+      />
     </div>
   );
 }
