@@ -12,8 +12,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Sistema de Avisos PDF",
-  description: "Visualizador de PDFs com modo TV",
+  title: "Painel de Avisos",
+  description: "Vitrine — Painel de Avisos para licitação, cotação e setor privado.",
 };
 
 export default function RootLayout({ children }) {

@@ -8,6 +8,7 @@ import {
   MessageSquare, Eye, EyeOff, List, Type, Monitor,
 } from 'lucide-react';
 import Whiteboard from '../../components/Whiteboard';
+import TitleStyleBar from '../../components/TitleStyleBar';
 import StructuredBoard from '../../components/StructuredBoard';
 import SheetBoard from '../../components/SheetBoard';
 import GoogleSheetSync from '../../components/GoogleSheetSync';
@@ -429,7 +430,7 @@ export default function QuadroPage() {
           {selectedBoard ? (
             <>
               <div className="flex items-center gap-3 flex-wrap">
-                <div className="flex-1 min-w-[260px] flex flex-col gap-1">
+                <div className="flex-1 min-w-[260px] flex flex-col gap-1 group/title relative">
                   <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-blue-600 select-none">
                     <Type className="w-3 h-3" />
                     Título exibido na TV
@@ -443,6 +444,13 @@ export default function QuadroPage() {
                       placeholder="Digite o título do quadro..."
                     />
                     <Edit2 className="w-3.5 h-3.5 text-gray-300 group-focus-within:text-blue-500 group-hover:text-gray-400 transition-colors" />
+                  </div>
+                  {/* Barra de estilo aparece só quando o título está em foco (input ou controles internos). */}
+                  <div className="absolute left-0 right-0 top-full z-30 hidden group-focus-within/title:block">
+                    <TitleStyleBar
+                      titleStyle={selectedBoard.titleStyle}
+                      onChange={updateBoardTitleStyle}
+                    />
                   </div>
                 </div>
                 {!selectedBoard.messageMode && (
@@ -529,11 +537,8 @@ export default function QuadroPage() {
                 {isStructured && !selectedBoard.messageMode && (
                   <StructuredBoard
                     key={selectedBoard.id}
-                    boardTitle={selectedBoard.title}
                     initialItems={selectedBoard.structuredItems || []}
                     onUpdate={updateBoardStructuredItems}
-                    titleStyle={selectedBoard.titleStyle}
-                    onTitleStyleUpdate={updateBoardTitleStyle}
                   />
                 )}
 

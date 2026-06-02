@@ -1,7 +1,7 @@
 [
   {
     "id": "g81c8krl2",
-    "title": "Teste",
+    "title": "asdfasdf",
     "content": {
       "title": {
         "type": "doc",
@@ -10,7 +10,13 @@
             "type": "paragraph",
             "attrs": {
               "textAlign": null
-            }
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "asdfasdf"
+              }
+            ]
           }
         ]
       },

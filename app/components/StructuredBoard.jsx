@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown, Bold, CaseSensitive } from 'lucide-react';
+import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
 
 const STATUS_OPTIONS = [
   { value: 'none',     label: 'Sem status',     color: '#6B7280', bg: '#F3F4F6', border: '#D1D5DB' },
@@ -231,60 +231,20 @@ export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc, titleS
   );
 }
 
-// ─── TITLE STYLE CONFIG ──────────────────────────────────────────────────────
-const TITLE_FONT_OPTIONS = [
-  { value: 'Montserrat', label: 'Montserrat' },
-  { value: 'Aptos', label: 'Aptos' },
-  { value: 'Inter', label: 'Inter' },
-  { value: 'Arial', label: 'Arial' },
-];
-
-const TITLE_SIZE_OPTIONS = [
-  { value: 'auto', label: 'Auto' },
-  { value: '1.6vw', label: 'Pequeno' },
-  { value: '2vw', label: 'Médio' },
-  { value: '2.4vw', label: 'Padrão' },
-  { value: '2.8vw', label: 'Grande' },
-  { value: '3.2vw', label: 'Extra Grande' },
-  { value: '3.8vw', label: 'Máximo' },
-];
-
-const TITLE_COLOR_PRESETS = [
-  '#00358E', '#000000', '#2563EB', '#C2410C', '#16A34A', '#854F0B', '#9333EA',
-];
-
-const DEFAULT_TITLE_STYLE = {
-  fontFamily: 'Montserrat',
-  fontSize: 'auto',
-  color: '#00358E',
-  fontWeight: 800,
-  textTransform: 'uppercase',
-};
-
 // ─── EDITOR ──────────────────────────────────────────────────────────────────
-export default function StructuredBoard({ initialItems = [], boardTitle = '', onUpdate, titleStyle: initialTitleStyle, onTitleStyleUpdate }) {
+// O estilo do título agora é controlado externamente (TitleStyleBar no header do quadro).
+// Este componente cuida apenas das linhas estruturadas.
+export default function StructuredBoard({ initialItems = [], onUpdate }) {
   const [items, setItems] = useState(() =>
     initialItems.length > 0 ? initialItems : [emptyItem()]
   );
-  const [titleStyle, setTitleStyle] = useState(() => ({
-    ...DEFAULT_TITLE_STYLE,
-    ...(initialTitleStyle || {}),
-  }));
   const saveTimer = useRef(null);
-  const titleStyleTimer = useRef(null);
   const lastInputRef = useRef(null);
 
   const save = (newItems) => {
     setItems(newItems);
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => onUpdate?.(newItems), 400);
-  };
-
-  const updateTitleStyle = (updates) => {
-    const newStyle = { ...titleStyle, ...updates };
-    setTitleStyle(newStyle);
-    if (titleStyleTimer.current) clearTimeout(titleStyleTimer.current);
-    titleStyleTimer.current = setTimeout(() => onTitleStyleUpdate?.(newStyle), 300);
   };
 
   const addItem = () => {
@@ -316,132 +276,8 @@ export default function StructuredBoard({ initialItems = [], boardTitle = '', on
     save(arr);
   };
 
-  const isBold = titleStyle.fontWeight >= 700;
-  const isUppercase = titleStyle.textTransform === 'uppercase';
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Title style controls */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '10px',
-        padding: '7px 16px',
-        borderBottom: '0.5px solid #E5E7EB',
-        background: '#F9FAFB',
-        flexWrap: 'wrap',
-      }}>
-        <span style={{ fontSize: '10px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '2px' }}>
-          Título
-        </span>
-
-        {/* Font Family */}
-        <select
-          value={titleStyle.fontFamily}
-          onChange={(e) => updateTitleStyle({ fontFamily: e.target.value })}
-          style={{
-            fontSize: '11px', fontWeight: 500, padding: '3px 8px',
-            border: '0.5px solid #D1D5DB', borderRadius: '6px',
-            background: '#fff', cursor: 'pointer', outline: 'none',
-            minWidth: '110px', color: '#374151',
-          }}
-        >
-          {TITLE_FONT_OPTIONS.map(f => (
-            <option key={f.value} value={f.value}>{f.label}</option>
-          ))}
-        </select>
-
-        {/* Font Size */}
-        <select
-          value={titleStyle.fontSize || 'auto'}
-          onChange={(e) => updateTitleStyle({ fontSize: e.target.value })}
-          style={{
-            fontSize: '11px', fontWeight: 500, padding: '3px 8px',
-            border: '0.5px solid #D1D5DB', borderRadius: '6px',
-            background: '#fff', cursor: 'pointer', outline: 'none',
-            minWidth: '90px', color: '#374151',
-          }}
-        >
-          {TITLE_SIZE_OPTIONS.map(s => (
-            <option key={s.value} value={s.value}>{s.label}</option>
-          ))}
-        </select>
-
-        {/* Separator */}
-        <div style={{ width: '1px', height: '18px', background: '#E5E7EB' }} />
-
-        {/* Color presets */}
-        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-          {TITLE_COLOR_PRESETS.map(color => (
-            <button
-              key={color}
-              onClick={() => updateTitleStyle({ color })}
-              style={{
-                width: 18, height: 18, borderRadius: '50%',
-                backgroundColor: color,
-                border: titleStyle.color === color ? '2px solid #3B82F6' : '1px solid #D1D5DB',
-                cursor: 'pointer', padding: 0,
-                outline: titleStyle.color === color ? '2px solid #BFDBFE' : 'none',
-                outlineOffset: '1px',
-                transition: 'all 0.1s',
-              }}
-              title={color}
-            />
-          ))}
-        </div>
-
-        {/* Separator */}
-        <div style={{ width: '1px', height: '18px', background: '#E5E7EB' }} />
-
-        {/* Bold toggle */}
-        <button
-          onClick={() => updateTitleStyle({ fontWeight: isBold ? 400 : 800 })}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 28, height: 28, borderRadius: '6px',
-            border: '0.5px solid #D1D5DB', cursor: 'pointer',
-            background: isBold ? '#EFF6FF' : '#fff',
-            color: isBold ? '#2563EB' : '#6B7280',
-            transition: 'all 0.1s',
-          }}
-          title={isBold ? 'Remover negrito' : 'Aplicar negrito'}
-        >
-          <Bold style={{ width: 14, height: 14 }} />
-        </button>
-
-        {/* Uppercase toggle */}
-        <button
-          onClick={() => updateTitleStyle({ textTransform: isUppercase ? 'none' : 'uppercase' })}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            height: 28, padding: '0 8px', borderRadius: '6px',
-            border: '0.5px solid #D1D5DB', cursor: 'pointer',
-            background: isUppercase ? '#EFF6FF' : '#fff',
-            color: isUppercase ? '#2563EB' : '#6B7280',
-            fontSize: '10px', fontWeight: 600, letterSpacing: '0.04em',
-            transition: 'all 0.1s',
-          }}
-          title={isUppercase ? 'Texto normal' : 'MAIÚSCULAS'}
-        >
-          AA
-        </button>
-
-        {/* Preview */}
-        <span style={{
-          marginLeft: 'auto',
-          fontSize: '12px',
-          fontFamily: `'${titleStyle.fontFamily}', sans-serif`,
-          fontWeight: titleStyle.fontWeight,
-          color: titleStyle.color,
-          textTransform: titleStyle.textTransform,
-          opacity: 0.8,
-          maxWidth: '200px',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}>
-          {boardTitle || 'Título'}
-        </span>
-      </div>
-
       {/* Column headers */}
       <div style={{
         display: 'grid',
