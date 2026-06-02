@@ -456,6 +456,28 @@ export default function QuadroPage() {
                 {!selectedBoard.messageMode && (
                   <ModeToggle mode={selectedBoard.boardMode || 'rich'} onChange={(mode) => setBoardMode(selectedBoard.id, mode)} options={modeOptions} />
                 )}
+              </div>
+
+              {/* Linha de comportamento: como o quadro se comporta no painel da TV */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-gray-400 select-none mr-1">
+                  Comportamento
+                </span>
+
+                <button
+                  onClick={(e) => toggleVisibility(selectedBoard.id, e)}
+                  className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium border transition-colors ${
+                    selectedBoard.isVisible
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                      : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-gray-700'
+                  }`}
+                  title={selectedBoard.isVisible ? 'Clique para ocultar este quadro do painel' : 'Clique para mostrar este quadro no painel'}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${selectedBoard.isVisible ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+                  {selectedBoard.isVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                  {selectedBoard.isVisible ? 'Visível no painel' : 'Oculto do painel'}
+                </button>
+
                 <button
                   onClick={() => toggleMainScreen(selectedBoard.id)}
                   className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium border transition-colors ${
@@ -463,24 +485,29 @@ export default function QuadroPage() {
                       ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
                       : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-gray-700'
                   }`}
-                  title="Quando ativo, exibe apenas este quadro no painel"
+                  title="Quando ativo, este quadro é o único exibido no painel (ignora os demais)"
                 >
                   <span className={`w-1.5 h-1.5 rounded-full ${selectedBoard.isMainScreen ? 'bg-blue-500' : 'bg-gray-300'}`} />
                   <Monitor className="w-3.5 h-3.5" />
-                  TELA PRINCIPAL
+                  Tela principal
                 </button>
-                <button
-                  onClick={() => toggleMessageMode(selectedBoard.id)}
-                  className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium border transition-colors ${
-                    selectedBoard.messageMode
-                      ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
-                      : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-gray-700'
-                  }`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${selectedBoard.messageMode ? 'bg-blue-500' : 'bg-gray-300'}`} />
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  Modo Mensagem
-                </button>
+
+                {/* Modo Mensagem é específico do Pregão (mensagem do dia bíblica). */}
+                {category === 'pregao' && (
+                  <button
+                    onClick={() => toggleMessageMode(selectedBoard.id)}
+                    className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium border transition-colors ${
+                      selectedBoard.messageMode
+                        ? 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+                        : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-gray-700'
+                    }`}
+                    title="Substitui o conteúdo do quadro pela mensagem do dia"
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${selectedBoard.messageMode ? 'bg-purple-500' : 'bg-gray-300'}`} />
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    Modo Mensagem
+                  </button>
+                )}
               </div>
 
               {isStructured && !selectedBoard.messageMode && (
@@ -515,25 +542,6 @@ export default function QuadroPage() {
               )}
 
               <div className="flex-1 min-h-0 relative bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-                {selectedBoard.isMainScreen && (
-                  <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full border bg-blue-50 text-blue-700 border-blue-200">
-                    <Monitor className="w-3 h-3" />
-                    Tela principal
-                    <button onClick={(e) => toggleMainScreen(selectedBoard.id, e)} className="ml-1 text-[10px] underline underline-offset-2 opacity-70 hover:opacity-100 transition-opacity">
-                      Desativar
-                    </button>
-                  </div>
-                )}
-                <div className={`absolute top-3 right-3 z-10 flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full border ${
-                  selectedBoard.isVisible ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-500 border-gray-200'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${selectedBoard.isVisible ? 'bg-emerald-400' : 'bg-gray-400'}`} />
-                  {selectedBoard.isVisible ? 'Visível no painel' : 'Oculto do painel'}
-                  <button onClick={(e) => toggleVisibility(selectedBoard.id, e)} className="ml-1 text-[10px] underline underline-offset-2 opacity-70 hover:opacity-100 transition-opacity">
-                    {selectedBoard.isVisible ? 'Ocultar' : 'Mostrar'}
-                  </button>
-                </div>
-
                 {isStructured && !selectedBoard.messageMode && (
                   <StructuredBoard
                     key={selectedBoard.id}
