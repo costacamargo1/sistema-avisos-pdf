@@ -5,20 +5,21 @@ import { Redis } from '@upstash/redis';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 
-// Mantém os dados legados em 'pregao' (chaves/arquivo originais) e isola 'cotacao' em chaves próprias.
+// 'pregao' mantém as chaves/arquivo originais (sem sufixo) para não migrar dados legados.
+// Categorias novas usam sufixo próprio.
+const CATEGORY_STORAGE = {
+    pregao:       { redisKey: 'whiteboard_data',               file: 'whiteboard.json' },
+    cotacao:      { redisKey: 'whiteboard_data_cotacao',       file: 'whiteboard_cotacao.json' },
+    setorprivado: { redisKey: 'whiteboard_data_setorprivado',  file: 'whiteboard_setorprivado.json' },
+};
+
 function resolveKeys(rawCategory) {
-    const category = rawCategory === 'cotacao' ? 'cotacao' : 'pregao';
-    if (category === 'cotacao') {
-        return {
-            category,
-            redisKey: 'whiteboard_data_cotacao',
-            filePath: path.join(DATA_DIR, 'whiteboard_cotacao.json'),
-        };
-    }
+    const category = CATEGORY_STORAGE[rawCategory] ? rawCategory : 'pregao';
+    const cfg = CATEGORY_STORAGE[category];
     return {
         category,
-        redisKey: 'whiteboard_data',
-        filePath: path.join(DATA_DIR, 'whiteboard.json'),
+        redisKey: cfg.redisKey,
+        filePath: path.join(DATA_DIR, cfg.file),
     };
 }
 

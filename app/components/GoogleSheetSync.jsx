@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { RefreshCw, ExternalLink, CheckCircle2, AlertCircle } from 'lucide-react';
+import { RefreshCw, ExternalLink, CheckCircle2, AlertCircle, Link2 } from 'lucide-react';
 
 const SERVICE_ACCOUNT_HINT = 'Compartilhe a planilha (como Leitor) com o e-mail da conta de serviço do painel.';
 
@@ -67,20 +67,43 @@ export default function GoogleSheetSync({ initialUrl = '', onUrlChange }) {
         borderBottom: '0.5px solid var(--color-border-tertiary)',
         background: 'var(--color-background-secondary)',
       }}>
-        <input
-          value={url}
-          onChange={e => handleChange(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') fetchPreview(); }}
-          placeholder="Cole o link da planilha do Google Sheets…"
-          style={{
-            flex: 1, fontSize: '13px', fontFamily: 'var(--font-sans)',
-            background: 'var(--color-background-primary)',
-            border: '0.5px solid var(--color-border-secondary)',
-            borderRadius: 'var(--border-radius-md)',
-            outline: 'none', padding: '8px 10px',
-            color: 'var(--color-text-primary)',
-          }}
-        />
+        <div style={{
+          flex: 1, display: 'flex', alignItems: 'center', gap: '8px',
+          background: '#fff',
+          border: '1px solid #CBD5E1',
+          borderRadius: 'var(--border-radius-md)',
+          padding: '0 12px',
+          boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+          transition: 'border-color 0.15s, box-shadow 0.15s',
+        }}>
+          <Link2 style={{ width: 15, height: 15, color: '#64748B', flexShrink: 0 }} />
+          <input
+            value={url}
+            onChange={e => handleChange(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') fetchPreview(); }}
+            onFocus={e => {
+              const wrap = e.currentTarget.parentElement;
+              if (wrap) {
+                wrap.style.borderColor = '#00358E';
+                wrap.style.boxShadow = '0 0 0 3px rgba(0, 53, 142, 0.15)';
+              }
+            }}
+            onBlur={e => {
+              const wrap = e.currentTarget.parentElement;
+              if (wrap) {
+                wrap.style.borderColor = '#CBD5E1';
+                wrap.style.boxShadow = '0 1px 2px rgba(15, 23, 42, 0.04)';
+              }
+            }}
+            placeholder="Cole aqui o link da sua planilha do Google Sheets…"
+            style={{
+              flex: 1, fontSize: '13px', fontFamily: 'var(--font-sans)',
+              background: 'transparent', border: 'none', outline: 'none',
+              padding: '10px 0',
+              color: 'var(--color-text-primary)',
+            }}
+          />
+        </div>
         <button
           onClick={() => fetchPreview()}
           disabled={status === 'loading' || !url.trim()}

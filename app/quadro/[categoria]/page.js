@@ -24,7 +24,16 @@ const generateId = () => Math.random().toString(36).substr(2, 9);
 const CATEGORY_LABELS = {
   pregao: 'Pregão Eletrônico',
   cotacao: 'Cotação',
+  setorprivado: 'Setor Privado',
 };
+
+const PANEL_HREFS = {
+  pregao: '/',
+  cotacao: '/cotacao',
+  setorprivado: '/setorprivado',
+};
+
+const VALID_CATEGORIES = new Set(Object.keys(CATEGORY_LABELS));
 
 const extractTextFromNode = (node) => {
   if (!node || typeof node !== 'object') return '';
@@ -71,9 +80,9 @@ function ModeToggle({ mode, onChange, options }) {
 
 export default function QuadroPage() {
   const params = useParams();
-  const category = params?.categoria === 'cotacao' ? 'cotacao' : 'pregao';
+  const category = VALID_CATEGORIES.has(params?.categoria) ? params.categoria : 'pregao';
   const categoryLabel = CATEGORY_LABELS[category];
-  const panelHref = category === 'cotacao' ? '/cotacao' : '/';
+  const panelHref = PANEL_HREFS[category];
 
   const [boards, setBoards] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -290,8 +299,8 @@ export default function QuadroPage() {
   const isStructured = selectedBoard?.boardMode === 'structured';
   const isSheet = selectedBoard?.boardMode === 'sheet';
   const isGoogle = selectedBoard?.boardMode === 'google';
-  // Planilha e Sincronização com Google disponíveis apenas na categoria Cotação.
-  const modeOptions = category === 'cotacao'
+  // Planilha e Sincronização com Google disponíveis em Cotação e Setor Privado (Pregão usa só os modos base).
+  const modeOptions = (category === 'cotacao' || category === 'setorprivado')
     ? [...BASE_MODE_OPTIONS, SHEET_MODE_OPTION, GOOGLE_MODE_OPTION]
     : BASE_MODE_OPTIONS;
 
@@ -420,13 +429,22 @@ export default function QuadroPage() {
           {selectedBoard ? (
             <>
               <div className="flex items-center gap-3 flex-wrap">
-                <input
-                  ref={titleInputRef}
-                  value={selectedBoard.title}
-                  onChange={(e) => saveBoards(boards.map(b => b.id === selectedId ? { ...b, title: e.target.value } : b))}
-                  className="flex-1 text-[20px] font-medium tracking-tight text-gray-900 bg-transparent outline-none border-b border-transparent hover:border-gray-300 focus:border-blue-500 px-0 py-1 transition-colors placeholder-gray-300 min-w-[200px]"
-                  placeholder="Título do quadro"
-                />
+                <div className="flex-1 min-w-[260px] flex flex-col gap-1">
+                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-blue-600 select-none">
+                    <Type className="w-3 h-3" />
+                    Título exibido na TV
+                  </label>
+                  <div className="group flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 transition-colors focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 hover:border-gray-300">
+                    <input
+                      ref={titleInputRef}
+                      value={selectedBoard.title}
+                      onChange={(e) => saveBoards(boards.map(b => b.id === selectedId ? { ...b, title: e.target.value } : b))}
+                      className="flex-1 text-[20px] font-semibold tracking-tight text-gray-900 bg-transparent outline-none placeholder-gray-300"
+                      placeholder="Digite o título do quadro..."
+                    />
+                    <Edit2 className="w-3.5 h-3.5 text-gray-300 group-focus-within:text-blue-500 group-hover:text-gray-400 transition-colors" />
+                  </div>
+                </div>
                 {!selectedBoard.messageMode && (
                   <ModeToggle mode={selectedBoard.boardMode || 'rich'} onChange={(mode) => setBoardMode(selectedBoard.id, mode)} options={modeOptions} />
                 )}
@@ -470,8 +488,13 @@ export default function QuadroPage() {
               )}
 
               {isGoogle && !selectedBoard.messageMode && (
-                <div className="flex items-center gap-2 px-3.5 py-2 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700">
-                  <span>Modo sincronizado — a tabela exibida na TV espelha exatamente a planilha do Google (colunas e linhas conforme o Sheets). A TV atualiza a cada 20 minutos.</span>
+                <div className="flex flex-col gap-1 px-3.5 py-2.5 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700">
+                  <span className="font-semibold">Exiba uma planilha do Google Sheets direto na TV.</span>
+                  <span>
+                    Crie ou abra sua planilha no <strong>Google Sheets</strong>, clique em <strong>Compartilhar → Qualquer pessoa com o link → Leitor</strong>, copie o link e cole no campo abaixo.
+                    O painel passa a espelhar a planilha em tempo real, com as mesmas colunas, linhas e formatação — e atualiza sozinho a cada 20 minutos.
+                    Edite na planilha e a TV reflete o conteúdo na próxima atualização.
+                  </span>
                 </div>
               )}
 

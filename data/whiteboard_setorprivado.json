@@ -1,0 +1,64 @@
+[
+  {
+    "id": "g81c8krl2",
+    "title": "Teste",
+    "content": {
+      "title": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": null
+            }
+          }
+        ]
+      },
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": null
+            }
+          }
+        ]
+      },
+      "logoLayout": "bottom-right-small",
+      "verticalAlign": "top"
+    },
+    "isVisible": true,
+    "messageMode": false,
+    "boardMode": "structured",
+    "structuredItems": [
+      {
+        "id": "rwxbcdpj6",
+        "process": "",
+        "product": "",
+        "action": "",
+        "observation": "",
+        "status": "none"
+      },
+      {
+        "id": "8buxjj7py",
+        "process": "",
+        "product": "",
+        "action": "",
+        "observation": "",
+        "status": "none"
+      }
+    ],
+    "titleStyle": {
+      "fontFamily": "Montserrat",
+      "fontSize": "auto",
+      "color": "#00358E",
+      "fontWeight": 800,
+      "textTransform": "uppercase"
+    },
+    "isMainScreen": false,
+    "sheetItems": [],
+    "sheetHeaders": {},
+    "googleSheetUrl": ""
+  }
+]
