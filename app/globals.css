@@ -182,6 +182,26 @@ select:focus {
   pointer-events: none;
 }
 
+.sheet-board-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 53, 142, 0.38) rgba(229, 231, 235, 0.6);
+}
+
+.sheet-board-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.sheet-board-scroll::-webkit-scrollbar-track {
+  background: rgba(229, 231, 235, 0.6);
+  border-radius: 999px;
+}
+
+.sheet-board-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 53, 142, 0.38);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+}
+
 /* Canvas Fixes */
 canvas:-webkit-full-screen,
 canvas:fullscreen {

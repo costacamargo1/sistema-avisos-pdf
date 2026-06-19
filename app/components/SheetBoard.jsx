@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Plus, Trash2, ChevronUp, ChevronDown, Bold, Minus, RotateCcw } from 'lucide-react';
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 const MIN_COLUMN_FLEX = 0.6;
 const MAX_COLUMN_FLEX = 3.4;
 const COLUMN_FLEX_STEP = 0.2;
+const GOOGLE_SHEET_SCROLL_START_DELAY_MS = 2500;
+const GOOGLE_SHEET_SCROLL_END_PAUSE_MS = 5000;
+const GOOGLE_SHEET_SCROLL_RESET_PAUSE_MS = 1500;
+const GOOGLE_SHEET_SCROLL_SPEED = 18; // px/s
 
 // Paleta de cores para formatacao de coluna (mesma identidade da lista estruturada).
 const CELL_COLOR_PRESETS = [
@@ -237,6 +241,7 @@ function freeColumnFlex(headers, rows, colIndex) {
 
 export function GoogleSheetDisplay({ boardTitle, headers = [], rows = [], logoSrc, titleStyle: rawTitleStyle }) {
   const titleStyle = rawTitleStyle ?? {};
+  const scrollRef = useRef(null);
   const colCount = headers.length;
   const gridTemplate = colCount > 0
     ? headers.map((_, i) => `${freeColumnFlex(headers, rows, i)}fr`).join(' ')
@@ -261,6 +266,62 @@ export function GoogleSheetDisplay({ boardTitle, headers = [], rows = [], logoSr
     ? `'${titleStyle.fontFamily}', sans-serif`
     : "'Aptos', 'Montserrat', sans-serif";
 
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || colCount === 0) return undefined;
+
+    let frameId = null;
+    let timerId = null;
+    let lastTick = null;
+    let stopped = false;
+
+    const clearPending = () => {
+      if (frameId !== null) cancelAnimationFrame(frameId);
+      if (timerId !== null) clearTimeout(timerId);
+      frameId = null;
+      timerId = null;
+    };
+
+    const hasOverflow = () => el.scrollHeight - el.clientHeight > 4;
+
+    const step = (timestamp) => {
+      if (stopped) return;
+      if (!hasOverflow()) return;
+
+      if (lastTick === null) lastTick = timestamp;
+      const elapsed = timestamp - lastTick;
+      lastTick = timestamp;
+
+      const maxScroll = el.scrollHeight - el.clientHeight;
+      const nextTop = Math.min(maxScroll, el.scrollTop + (elapsed / 1000) * GOOGLE_SHEET_SCROLL_SPEED);
+      el.scrollTop = nextTop;
+
+      if (nextTop >= maxScroll - 1) {
+        timerId = setTimeout(() => {
+          if (stopped) return;
+          el.scrollTop = 0;
+          lastTick = null;
+          timerId = setTimeout(() => {
+            if (!stopped) frameId = requestAnimationFrame(step);
+          }, GOOGLE_SHEET_SCROLL_RESET_PAUSE_MS);
+        }, GOOGLE_SHEET_SCROLL_END_PAUSE_MS);
+        return;
+      }
+
+      frameId = requestAnimationFrame(step);
+    };
+
+    el.scrollTop = 0;
+    timerId = setTimeout(() => {
+      if (!stopped && hasOverflow()) frameId = requestAnimationFrame(step);
+    }, GOOGLE_SHEET_SCROLL_START_DELAY_MS);
+
+    return () => {
+      stopped = true;
+      clearPending();
+    };
+  }, [colCount, headers, rows]);
+
   return (
     <div style={{
       width: '100%', height: '100%',
@@ -281,10 +342,28 @@ export function GoogleSheetDisplay({ boardTitle, headers = [], rows = [], logoSr
         </span>
       </div>
 
-      <div style={{ flex: 1, overflow: 'hidden', padding: '1.2vw 2.2vw' }}>
+      <div
+        ref={scrollRef}
+        className="sheet-board-scroll"
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          padding: '1.2vw 2.2vw 4.8vw',
+          scrollbarGutter: 'stable',
+          overscrollBehavior: 'contain',
+        }}
+      >
         {colCount > 0 ? (
           <div style={{ border: '1px solid #1F2937', borderRadius: '4px', overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: gridTemplate }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: gridTemplate,
+              position: 'sticky',
+              top: 0,
+              zIndex: 2,
+            }}>
               {headers.map((h, i) => (
                 <div key={i} style={{
                   fontSize: headSize, fontWeight: 800, color: '#00358E',
