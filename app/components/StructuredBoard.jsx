@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
 
 const STATUS_OPTIONS = [
@@ -28,29 +28,102 @@ const emptyItem = () => ({
 // ─── TV DISPLAY ──────────────────────────────────────────────────────────────
 export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc, titleStyle: rawTitleStyle }) {
   const titleStyle = rawTitleStyle ?? {};
-  const validItems = items.filter(i => i.process || i.product || i.action);
+  const validItems = useMemo(
+    () => items.filter(i => i.process || i.product || i.action),
+    [items]
+  );
+  const itemsRef = useRef(null);
+  const [fitScale, setFitScale] = useState(1);
+  const fitScaleRef = useRef(1);
 
   // Dynamic font scaling based on item count — smaller sizes to prevent wrapping
   const count = validItems.length;
-  let titleSize, itemSize, gap;
+  let titleSize, baseItemSizeVw, gap;
 
   if (count <= 3) {
     titleSize = '2.8vw';
-    itemSize  = '1.8vw';
+    baseItemSizeVw = 1.8;
     gap       = '2.4vw';
   } else if (count <= 5) {
     titleSize = '2.4vw';
-    itemSize  = '1.55vw';
+    baseItemSizeVw = 1.55;
     gap       = '1.8vw';
   } else if (count <= 7) {
     titleSize = '2.2vw';
-    itemSize  = '1.35vw';
+    baseItemSizeVw = 1.35;
     gap       = '1.3vw';
   } else {
     titleSize = '2vw';
-    itemSize  = '1.15vw';
+    baseItemSizeVw = 1.15;
     gap       = '1vw';
   }
+
+  const itemSize = `${baseItemSizeVw * fitScale}vw`;
+  const statusSize = `${baseItemSizeVw * fitScale * 0.78}vw`;
+  const observationSize = `${baseItemSizeVw * fitScale * 0.85}vw`;
+  const rowGap = `${0.6 * fitScale}vw`;
+  const numberWidth = `${2 * fitScale}vw`;
+  const statusPadding = `${0.15 * fitScale}vw ${0.5 * fitScale}vw`;
+  const rowSignature = useMemo(
+    () => validItems
+      .map(i => [i.process, i.product, i.action, i.status, i.observation].join('::'))
+      .join('||'),
+    [validItems]
+  );
+
+  useEffect(() => {
+    fitScaleRef.current = fitScale;
+  }, [fitScale]);
+
+  useEffect(() => {
+    const root = itemsRef.current;
+    if (!root) return;
+
+    let frameId = 0;
+    const measureRows = () => {
+      if (frameId) cancelAnimationFrame(frameId);
+
+      frameId = requestAnimationFrame(() => {
+        const rows = Array.from(root.querySelectorAll('[data-structured-row]'));
+        if (rows.length === 0) {
+          setFitScale(1);
+          return;
+        }
+
+        const currentScale = fitScaleRef.current || 1;
+        let nextScale = 1;
+
+        for (const row of rows) {
+          const available = row.clientWidth;
+          const neededAtFullScale = row.scrollWidth / currentScale;
+
+          if (available > 0 && neededAtFullScale > available) {
+            nextScale = Math.min(
+              nextScale,
+              Math.max(0.58, (available / neededAtFullScale) * 0.98)
+            );
+          }
+        }
+
+        setFitScale(prev => (Math.abs(prev - nextScale) > 0.015 ? nextScale : prev));
+      });
+    };
+
+    measureRows();
+    window.addEventListener('resize', measureRows);
+
+    let resizeObserver;
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(measureRows);
+      resizeObserver.observe(root);
+    }
+
+    return () => {
+      if (frameId) cancelAnimationFrame(frameId);
+      window.removeEventListener('resize', measureRows);
+      resizeObserver?.disconnect();
+    };
+  }, [rowSignature, baseItemSizeVw]);
 
   // Merge user title style with dynamic defaults
   const resolvedTitleFontFamily = titleStyle.fontFamily
@@ -83,7 +156,7 @@ export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc, titleS
       </div>
 
       {/* Items */}
-      <div style={{
+      <div ref={itemsRef} style={{
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
@@ -102,17 +175,17 @@ export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc, titleS
               <div style={{
                 display: 'flex',
                 alignItems: 'baseline',
-                gap: '0.6vw',
+                gap: rowGap,
                 lineHeight: 1.3,
                 flexWrap: 'nowrap',
                 minWidth: 0,
-              }}>
+              }} data-structured-row>
                 {/* Number */}
                 <span style={{
                   fontSize: itemSize,
                   fontWeight: 800,
                   color: '#00358E',
-                  minWidth: '2vw',
+                  minWidth: numberWidth,
                   flexShrink: 0,
                   whiteSpace: 'nowrap',
                 }}>
@@ -156,9 +229,10 @@ export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc, titleS
                       fontSize: itemSize,
                       fontWeight: 700,
                       color: '#111827',
-                      whiteSpace: 'normal',
-                      overflowWrap: 'anywhere',
-                      minWidth: 0,
+                      whiteSpace: 'nowrap',
+                      overflowWrap: 'normal',
+                      minWidth: 'max-content',
+                      flexShrink: 0,
                     }}>
                       {item.action}
                     </span>
@@ -168,13 +242,13 @@ export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc, titleS
                 {/* Status tag */}
                 {hasTag && (
                   <span style={{
-                    fontSize: `calc(${itemSize} * 0.78)`,
+                    fontSize: statusSize,
                     fontWeight: 700,
                     color: st.color,
                     backgroundColor: st.bg,
                     border: `1px solid ${st.border}`,
                     borderRadius: '4px',
-                    padding: '0.15vw 0.5vw',
+                    padding: statusPadding,
                     flexShrink: 0,
                     whiteSpace: 'nowrap',
                     marginLeft: '0.3vw',
@@ -194,12 +268,12 @@ export function StructuredBoardDisplay({ boardTitle, items = [], logoSrc, titleS
                   marginTop: '0.2vw',
                 }}>
                   <span style={{
-                    fontSize: `calc(${itemSize} * 0.85)`,
+                    fontSize: observationSize,
                     color: '#6B7280',
                     flexShrink: 0,
                   }}>↳</span>
                   <span style={{
-                    fontSize: `calc(${itemSize} * 0.85)`,
+                    fontSize: observationSize,
                     fontWeight: 600,
                     color: '#374151',
                   }}>
