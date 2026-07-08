@@ -1,83 +1,5 @@
 [
   {
-    "id": "g81c8krl2",
-    "title": "",
-    "content": {
-      "title": {
-        "type": "doc",
-        "content": [
-          {
-            "type": "paragraph",
-            "attrs": {
-              "textAlign": null
-            }
-          }
-        ]
-      },
-      "body": {
-        "type": "doc",
-        "content": [
-          {
-            "type": "paragraph",
-            "attrs": {
-              "textAlign": null
-            }
-          }
-        ]
-      },
-      "logoLayout": "bottom-right-small",
-      "verticalAlign": "top"
-    },
-    "isVisible": false,
-    "messageMode": false,
-    "boardMode": "rich",
-    "structuredItems": [
-      {
-        "id": "rwxbcdpj6",
-        "process": "",
-        "product": "",
-        "action": "",
-        "observation": "",
-        "status": "none"
-      },
-      {
-        "id": "8buxjj7py",
-        "process": "",
-        "product": "",
-        "action": "",
-        "observation": "",
-        "status": "none"
-      }
-    ],
-    "titleStyle": {
-      "fontFamily": "Montserrat",
-      "fontSize": "auto",
-      "color": "#00358E",
-      "fontWeight": 800,
-      "textTransform": "uppercase"
-    },
-    "isMainScreen": false,
-    "sheetItems": [],
-    "sheetHeaders": {},
-    "googleSheetUrl": "",
-    "imageUrl": ""
-  },
-  {
-    "id": "wxvsmt4ks",
-    "title": "Quadro 2",
-    "content": null,
-    "isVisible": false,
-    "messageMode": false,
-    "boardMode": "structured",
-    "structuredItems": [],
-    "sheetItems": [],
-    "sheetHeaders": {},
-    "googleSheetUrl": "",
-    "titleStyle": null,
-    "isMainScreen": false,
-    "imageUrl": ""
-  },
-  {
     "id": "n60bxyhw5",
     "title": "IMAGEM",
     "content": null,
@@ -91,6 +13,6 @@
     "titleStyle": null,
     "isMainScreen": false,
     "imageUrl": "",
-    "calendarId": "https://calendar.google.com/calendar/embed?src=costacamargoltda%40gmail.com&ctz=America%2FSao_Paulo"
+    "calendarId": "https://calendar.google.com/calendar/embed?src=tuliogarcia94%40gmail.com&ctz=America%2FSao_Paulo"
   }
 ]

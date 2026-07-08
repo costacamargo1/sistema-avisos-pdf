@@ -109,6 +109,7 @@ export async function GET(request) {
         id: e.id,
         summary: e.summary || '(Sem título)',
         location: e.location || '',
+        description: (e.description || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim(),
         allDay: Boolean(e.start?.date),
         start: e.start?.dateTime || e.start?.date || null,
         end: e.end?.dateTime || e.end?.date || null,

@@ -264,6 +264,11 @@ export default function AgendaSync({ initialId = '', onIdChange }) {
                       {event.location && (
                         <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 400 }}> · {event.location}</span>
                       )}
+                      {event.description && (
+                        <span style={{ display: 'block', color: 'var(--color-text-tertiary)', fontWeight: 400, marginTop: '2px' }}>
+                          {event.description}
+                        </span>
+                      )}
                     </span>
                   </div>
                 ))}
@@ -299,15 +304,15 @@ export function AgendaDisplay({ boardTitle, events = [], titleStyle: rawTitleSty
 
   // Escala a fonte conforme o nº de eventos para caber sem rolar na TV.
   const count = events.length || 1;
-  let daySize, timeSize, titleSize, rowPad, dayPad, gap;
+  let daySize, timeSize, titleSize, descSize, rowPad, dayPad, gap;
   if (count <= 6) {
-    daySize = '1.15vw'; timeSize = '1.25vw'; titleSize = '1.4vw'; rowPad = '0.7vw 1.1vw'; dayPad = '0.5vw 1.1vw'; gap = '1.1vw';
+    daySize = '1.15vw'; timeSize = '1.25vw'; titleSize = '1.4vw'; descSize = '1.05vw'; rowPad = '0.7vw 1.1vw'; dayPad = '0.5vw 1.1vw'; gap = '1.1vw';
   } else if (count <= 12) {
-    daySize = '1vw'; timeSize = '1.05vw'; titleSize = '1.15vw'; rowPad = '0.5vw 1vw'; dayPad = '0.4vw 1vw'; gap = '0.9vw';
+    daySize = '1vw'; timeSize = '1.05vw'; titleSize = '1.15vw'; descSize = '0.9vw'; rowPad = '0.5vw 1vw'; dayPad = '0.4vw 1vw'; gap = '0.9vw';
   } else if (count <= 18) {
-    daySize = '0.85vw'; timeSize = '0.9vw'; titleSize = '1vw'; rowPad = '0.36vw 0.9vw'; dayPad = '0.3vw 0.9vw'; gap = '0.7vw';
+    daySize = '0.85vw'; timeSize = '0.9vw'; titleSize = '1vw'; descSize = '0.8vw'; rowPad = '0.36vw 0.9vw'; dayPad = '0.3vw 0.9vw'; gap = '0.7vw';
   } else {
-    daySize = '0.75vw'; timeSize = '0.78vw'; titleSize = '0.86vw'; rowPad = '0.26vw 0.8vw'; dayPad = '0.24vw 0.8vw'; gap = '0.55vw';
+    daySize = '0.75vw'; timeSize = '0.78vw'; titleSize = '0.86vw'; descSize = '0.72vw'; rowPad = '0.26vw 0.8vw'; dayPad = '0.24vw 0.8vw'; gap = '0.55vw';
   }
 
   const resolvedTitleFontFamily = titleStyle.fontFamily
@@ -384,6 +389,11 @@ export function AgendaDisplay({ boardTitle, events = [], titleStyle: rawTitleSty
                         {event.summary}
                         {event.location && (
                           <span style={{ color: '#6B7280', fontWeight: 400 }}> · {event.location}</span>
+                        )}
+                        {event.description && (
+                          <span style={{ display: 'block', fontSize: descSize, color: '#6B7280', fontWeight: 400, lineHeight: 1.3, marginTop: '0.15vw' }}>
+                            {event.description}
+                          </span>
                         )}
                       </span>
                     </div>
