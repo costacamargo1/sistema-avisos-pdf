@@ -236,13 +236,15 @@ export default function ClientApp({
 
       clearPdfState();
       alert('PDF removido com sucesso.');
+      // Sem PDF, o painel volta direto para os quadros de avisos em vez de ficar em branco.
+      await startBoardsIfNoPdf();
     } catch (err) {
       console.error('Erro ao remover PDF:', err);
       alert('Erro ao remover PDF: ' + (err.message || 'desconhecido'));
     } finally {
       setIsRemoving(false);
     }
-  }, [pdfUrl, pdfDoc, clearPdfState]);
+  }, [pdfUrl, pdfDoc, clearPdfState, startBoardsIfNoPdf]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -327,11 +329,13 @@ export default function ClientApp({
         setTotalPages(0);
         setCurrentPage(1);
         localStorage.removeItem('lastPdfUrl');
+        // PDF registrado mas inacessível (ex.: blob apagado): cai para os quadros em vez de tela em branco.
+        await startBoardsIfNoPdf();
       }
     })();
 
     return () => { cancelled = true; };
-  }, [pdfUrl, renderPage]);
+  }, [pdfUrl, renderPage, startBoardsIfNoPdf]);
 
   useEffect(() => {
     if (pdfDoc) renderPage(pdfDoc, currentPage, scale);
