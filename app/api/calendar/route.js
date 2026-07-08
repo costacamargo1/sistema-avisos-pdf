@@ -84,19 +84,28 @@ export async function GET(request) {
     );
   }
 
+  // Janela de datas: a lista/semana usa os próximos 7 dias; o modo mês pede
+  // uma janela maior (?days=) e, opcionalmente, dias anteriores (?back=) para
+  // cobrir a grade do mês, que começa antes do dia 1.
+  const daysParam = parseInt(searchParams.get('days') || '', 10);
+  const backParam = parseInt(searchParams.get('back') || '', 10);
+  const days = Number.isFinite(daysParam) && daysParam > 0 ? Math.min(daysParam, 60) : DAYS_AHEAD;
+  const back = Number.isFinite(backParam) && backParam > 0 ? Math.min(backParam, 15) : 0;
+
   try {
     const client = getAuthClient(credentials);
 
     const now = new Date();
-    const timeMin = `${spDay(now)}T00:00:00-03:00`;
-    const timeMax = `${spDay(new Date(now.getTime() + DAYS_AHEAD * 24 * 60 * 60 * 1000))}T23:59:59-03:00`;
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const timeMin = `${spDay(new Date(now.getTime() - back * DAY_MS))}T00:00:00-03:00`;
+    const timeMax = `${spDay(new Date(now.getTime() + days * DAY_MS))}T23:59:59-03:00`;
 
     const params = new URLSearchParams({
       timeMin,
       timeMax,
       singleEvents: 'true',
       orderBy: 'startTime',
-      maxResults: '100',
+      maxResults: '250',
       timeZone: TZ,
     });
     const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`;
@@ -117,7 +126,7 @@ export async function GET(request) {
 
     return NextResponse.json({
       title: res.data?.summary || '',
-      days: DAYS_AHEAD,
+      days,
       events,
       serviceAccountEmail: credentials.client_email,
     });

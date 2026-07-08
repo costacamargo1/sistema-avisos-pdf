@@ -459,12 +459,20 @@ export default function ClientApp({
 
   // Busca os eventos do Google Agenda para o quadro atual e atualiza a cada 20 min.
   const agendaId = isAgendaBoard ? (currentBoard?.calendarId || '') : '';
+  const agendaView = isAgendaBoard ? (currentBoard?.agendaView || 'list') : 'list';
   useEffect(() => {
     if (!agendaId) { setAgendaData(null); return; }
     let cancelled = false;
+    // Mês precisa de uma janela maior (grade do mês inteiro + dias da 1ª/última semana);
+    // lista e semana usam a janela padrão de 7 dias.
+    const query = agendaView === 'month'
+      ? `&days=42&back=7`
+      : agendaView === 'week'
+        ? `&days=8&back=7`
+        : '';
     const load = async () => {
       try {
-        const res = await fetch(`/api/calendar?calendar=${encodeURIComponent(agendaId)}`, { cache: 'no-store' });
+        const res = await fetch(`/api/calendar?calendar=${encodeURIComponent(agendaId)}${query}`, { cache: 'no-store' });
         const data = await res.json().catch(() => null);
         if (!cancelled && res.ok && data) setAgendaData(data);
       } catch {}
@@ -472,7 +480,7 @@ export default function ClientApp({
     load();
     const id = setInterval(load, GOOGLE_SHEET_REFRESH_MS);
     return () => { cancelled = true; clearInterval(id); };
-  }, [agendaId]);
+  }, [agendaId, agendaView]);
 
   // Efeito para redimensionamento e renderização ao mudar página ou entrar em TV mode
   useEffect(() => {
@@ -778,6 +786,7 @@ export default function ClientApp({
               boardTitle={currentBoard.title || ''}
               events={agendaData?.events || []}
               titleStyle={currentBoard.titleStyle || null}
+              viewMode={currentBoard.agendaView || 'list'}
             />
           )}
 

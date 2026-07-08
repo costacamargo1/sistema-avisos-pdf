@@ -114,6 +114,7 @@ export default function QuadroPage() {
             googleSheetUrl: board.googleSheetUrl || '',
             imageUrl: board.imageUrl || '',
             calendarId: board.calendarId || '',
+            agendaView: board.agendaView || 'list',
             titleStyle: board.titleStyle || null,
             isMainScreen: Boolean(board?.isMainScreen),
           }));
@@ -185,7 +186,7 @@ export default function QuadroPage() {
       id: generateId(), title: `Quadro ${boards.length + 1}`,
       content: null, isVisible: true, messageMode: false,
       boardMode: 'structured', structuredItems: [], sheetItems: [], sheetHeaders: {},
-      googleSheetUrl: '', imageUrl: '', calendarId: '',
+      googleSheetUrl: '', imageUrl: '', calendarId: '', agendaView: 'list',
       titleStyle: null,
       isMainScreen: false,
     };
@@ -200,7 +201,7 @@ export default function QuadroPage() {
     if (!confirm('Tem certeza que deseja excluir este quadro?')) return;
     const updated = boards.filter(b => b.id !== id);
     if (updated.length === 0) {
-      const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false, boardMode: 'structured', structuredItems: [], sheetItems: [], sheetHeaders: {}, googleSheetUrl: '', imageUrl: '', calendarId: '', titleStyle: null, isMainScreen: false };
+      const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false, boardMode: 'structured', structuredItems: [], sheetItems: [], sheetHeaders: {}, googleSheetUrl: '', imageUrl: '', calendarId: '', agendaView: 'list', titleStyle: null, isMainScreen: false };
       updated.push(def);
     }
     saveBoards(updated);
@@ -308,6 +309,10 @@ export default function QuadroPage() {
 
   const updateBoardCalendarId = (calendarId) => {
     saveBoards(boards.map(b => b.id === selectedId ? { ...b, calendarId } : b));
+  };
+
+  const updateBoardAgendaView = (agendaView) => {
+    saveBoards(boards.map(b => b.id === selectedId ? { ...b, agendaView } : b));
   };
 
   const selectedBoard = boards.find(b => b.id === selectedId);
@@ -622,6 +627,8 @@ export default function QuadroPage() {
                     key={selectedBoard.id}
                     initialId={selectedBoard.calendarId || ''}
                     onIdChange={updateBoardCalendarId}
+                    initialView={selectedBoard.agendaView || 'list'}
+                    onViewChange={updateBoardAgendaView}
                   />
                 )}
 

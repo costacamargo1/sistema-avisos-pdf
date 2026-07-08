@@ -102,6 +102,8 @@
       }
     ],
     "isMainScreen": false,
-    "googleSheetUrl": "https://docs.google.com/spreadsheets/d/143ru659QyTLsmtLMRqAU_I6JPEEsShWp93K1nPX-ZOw/edit?gid=1190641501#gid=1190641501"
+    "googleSheetUrl": "https://docs.google.com/spreadsheets/d/143ru659QyTLsmtLMRqAU_I6JPEEsShWp93K1nPX-ZOw/edit?gid=1190641501#gid=1190641501",
+    "imageUrl": "",
+    "calendarId": ""
   }
 ]

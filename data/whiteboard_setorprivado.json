@@ -13,6 +13,7 @@
     "titleStyle": null,
     "isMainScreen": false,
     "imageUrl": "",
-    "calendarId": "https://calendar.google.com/calendar/embed?src=tuliogarcia94%40gmail.com&ctz=America%2FSao_Paulo"
+    "calendarId": "https://calendar.google.com/calendar/embed?src=tuliogarcia94%40gmail.com&ctz=America%2FSao_Paulo",
+    "agendaView": "month"
   }
 ]
