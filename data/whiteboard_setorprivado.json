@@ -28,7 +28,7 @@
       "logoLayout": "bottom-right-small",
       "verticalAlign": "top"
     },
-    "isVisible": true,
+    "isVisible": false,
     "messageMode": false,
     "boardMode": "rich",
     "structuredItems": [
@@ -59,13 +59,14 @@
     "isMainScreen": false,
     "sheetItems": [],
     "sheetHeaders": {},
-    "googleSheetUrl": ""
+    "googleSheetUrl": "",
+    "imageUrl": ""
   },
   {
     "id": "wxvsmt4ks",
     "title": "Quadro 2",
     "content": null,
-    "isVisible": true,
+    "isVisible": false,
     "messageMode": false,
     "boardMode": "structured",
     "structuredItems": [],
@@ -73,6 +74,22 @@
     "sheetHeaders": {},
     "googleSheetUrl": "",
     "titleStyle": null,
-    "isMainScreen": false
+    "isMainScreen": false,
+    "imageUrl": ""
+  },
+  {
+    "id": "n60bxyhw5",
+    "title": "IMAGEM",
+    "content": null,
+    "isVisible": true,
+    "messageMode": false,
+    "boardMode": "image",
+    "structuredItems": [],
+    "sheetItems": [],
+    "sheetHeaders": {},
+    "googleSheetUrl": "",
+    "titleStyle": null,
+    "isMainScreen": false,
+    "imageUrl": ""
   }
 ]

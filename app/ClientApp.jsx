@@ -52,6 +52,7 @@ export default function ClientApp({
   const viewerRef = useRef(null);
   const currentBoard = visibleBoards[currentBoardIndex] || visibleBoards[0] || null;
   const isGoogleBoard = tvPhase === 'whiteboard' && currentBoard?.boardMode === 'google';
+  const isImageBoard = tvPhase === 'whiteboard' && currentBoard?.boardMode === 'image' && !currentBoard?.messageMode;
 
   const fitScaleContain = async (doc, pageNum, isTv = false) => {
     const container = viewerRef.current;
@@ -119,7 +120,12 @@ export default function ClientApp({
       const boards = Array.isArray(data)
         ? data
         : (data.content ? [{ ...data, isVisible: data.isVisible ?? true }] : []);
-      const visibleBoards = boards.filter(board => board?.isVisible !== false);
+      const visibleBoards = boards.filter(board => {
+        if (board?.isVisible === false) return false;
+        // Quadro de imagem só entra na rotação depois do upload da imagem.
+        if (board?.boardMode === 'image' && !board?.messageMode && !board?.imageUrl) return false;
+        return true;
+      });
       const mainScreenBoard = visibleBoards.find(board => board?.isMainScreen === true);
       return mainScreenBoard ? [mainScreenBoard] : visibleBoards;
     } catch {
@@ -740,7 +746,16 @@ export default function ClientApp({
             />
           )}
 
-          {tvPhase === 'whiteboard' && currentBoard && !isGoogleBoard && (
+          {tvPhase === 'whiteboard' && currentBoard && isImageBoard && (
+            <img
+              key={currentBoard.id || `img-${currentBoardIndex}`}
+              src={currentBoard.imageUrl}
+              alt=""
+              className="w-full h-full object-contain bg-white"
+            />
+          )}
+
+          {tvPhase === 'whiteboard' && currentBoard && !isGoogleBoard && !isImageBoard && (
             <Whiteboard
               key={currentBoard.id || `wb-${currentBoardIndex}`}
               initialContent={currentBoard.content}

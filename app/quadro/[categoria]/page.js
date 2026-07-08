@@ -12,6 +12,7 @@ import TitleStyleBar from '../../components/TitleStyleBar';
 import StructuredBoard from '../../components/StructuredBoard';
 import SheetBoard from '../../components/SheetBoard';
 import GoogleSheetSync from '../../components/GoogleSheetSync';
+import ImageBoard from '../../components/ImageBoard';
 
 const BASE_MODE_OPTIONS = [
   { value: 'structured', label: 'Lista estruturada' },
@@ -19,6 +20,7 @@ const BASE_MODE_OPTIONS = [
 ];
 const SHEET_MODE_OPTION = { value: 'sheet', label: 'Planilha' };
 const GOOGLE_MODE_OPTION = { value: 'google', label: 'Sincronizar com Google' };
+const IMAGE_MODE_OPTION = { value: 'image', label: 'Imagem' };
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
@@ -108,6 +110,7 @@ export default function QuadroPage() {
             sheetItems: board.sheetItems || [],
             sheetHeaders: board.sheetHeaders || {},
             googleSheetUrl: board.googleSheetUrl || '',
+            imageUrl: board.imageUrl || '',
             titleStyle: board.titleStyle || null,
             isMainScreen: Boolean(board?.isMainScreen),
           }));
@@ -179,7 +182,7 @@ export default function QuadroPage() {
       id: generateId(), title: `Quadro ${boards.length + 1}`,
       content: null, isVisible: true, messageMode: false,
       boardMode: 'structured', structuredItems: [], sheetItems: [], sheetHeaders: {},
-      googleSheetUrl: '',
+      googleSheetUrl: '', imageUrl: '',
       titleStyle: null,
       isMainScreen: false,
     };
@@ -194,7 +197,7 @@ export default function QuadroPage() {
     if (!confirm('Tem certeza que deseja excluir este quadro?')) return;
     const updated = boards.filter(b => b.id !== id);
     if (updated.length === 0) {
-      const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false, boardMode: 'structured', structuredItems: [], sheetItems: [], sheetHeaders: {}, googleSheetUrl: '', titleStyle: null, isMainScreen: false };
+      const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false, boardMode: 'structured', structuredItems: [], sheetItems: [], sheetHeaders: {}, googleSheetUrl: '', imageUrl: '', titleStyle: null, isMainScreen: false };
       updated.push(def);
     }
     saveBoards(updated);
@@ -296,14 +299,20 @@ export default function QuadroPage() {
     saveBoards(boards.map(b => b.id === selectedId ? { ...b, googleSheetUrl } : b));
   };
 
+  const updateBoardImageUrl = (imageUrl) => {
+    saveBoards(boards.map(b => b.id === selectedId ? { ...b, imageUrl } : b));
+  };
+
   const selectedBoard = boards.find(b => b.id === selectedId);
   const isStructured = selectedBoard?.boardMode === 'structured';
   const isSheet = selectedBoard?.boardMode === 'sheet';
   const isGoogle = selectedBoard?.boardMode === 'google';
+  const isImage = selectedBoard?.boardMode === 'image';
   // Planilha e Sincronização com Google disponíveis em Cotação e Setor Privado (Pregão usa só os modos base).
+  // Imagem disponível em todas as categorias.
   const modeOptions = (category === 'cotacao' || category === 'setorprivado')
-    ? [...BASE_MODE_OPTIONS, SHEET_MODE_OPTION, GOOGLE_MODE_OPTION]
-    : BASE_MODE_OPTIONS;
+    ? [...BASE_MODE_OPTIONS, SHEET_MODE_OPTION, GOOGLE_MODE_OPTION, IMAGE_MODE_OPTION]
+    : [...BASE_MODE_OPTIONS, IMAGE_MODE_OPTION];
 
   if (loading) {
     return (
@@ -393,13 +402,16 @@ export default function QuadroPage() {
                       </span>
                     )}
                   </div>
-                  {(!board.isVisible || board.messageMode || board.boardMode === 'structured' || board.isMainScreen) && (
+                  {(!board.isVisible || board.messageMode || board.boardMode === 'structured' || board.boardMode === 'image' || board.isMainScreen) && (
                     <div className="flex gap-1.5 mt-1.5 pl-[42px] flex-wrap">
                       {board.isMainScreen && (
                         <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">Tela principal</span>
                       )}
                       {board.boardMode === 'structured' && (
                         <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">Lista</span>
+                      )}
+                      {board.boardMode === 'image' && (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-100">Imagem</span>
                       )}
                       {board.messageMode && (
                         <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 border border-purple-100">Mensagem</span>
@@ -433,7 +445,7 @@ export default function QuadroPage() {
                 <div className="flex-1 min-w-[260px] flex flex-col gap-1 group/title relative">
                   <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-blue-600 select-none">
                     <Type className="w-3 h-3" />
-                    Título exibido na TV
+                    {isImage ? 'Nome do quadro (não aparece na TV)' : 'Título exibido na TV'}
                   </label>
                   <div className="group flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 transition-colors focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 hover:border-gray-300">
                     <input
@@ -446,12 +458,14 @@ export default function QuadroPage() {
                     <Edit2 className="w-3.5 h-3.5 text-gray-300 group-focus-within:text-blue-500 group-hover:text-gray-400 transition-colors" />
                   </div>
                   {/* Barra de estilo aparece só quando o título está em foco (input ou controles internos). */}
-                  <div className="absolute left-0 right-0 top-full z-30 hidden group-focus-within/title:block">
-                    <TitleStyleBar
-                      titleStyle={selectedBoard.titleStyle}
-                      onChange={updateBoardTitleStyle}
-                    />
-                  </div>
+                  {!isImage && (
+                    <div className="absolute left-0 right-0 top-full z-30 hidden group-focus-within/title:block">
+                      <TitleStyleBar
+                        titleStyle={selectedBoard.titleStyle}
+                        onChange={updateBoardTitleStyle}
+                      />
+                    </div>
+                  )}
                 </div>
                 {!selectedBoard.messageMode && (
                   <ModeToggle mode={selectedBoard.boardMode || 'rich'} onChange={(mode) => setBoardMode(selectedBoard.id, mode)} options={modeOptions} />
@@ -522,6 +536,12 @@ export default function QuadroPage() {
                 </div>
               )}
 
+              {isImage && !selectedBoard.messageMode && (
+                <div className="flex items-center gap-2 px-3.5 py-2 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700">
+                  <span>Modo imagem — a imagem é exibida em <strong>tela cheia</strong> na TV, sem título e sem timbrado.</span>
+                </div>
+              )}
+
               {isGoogle && !selectedBoard.messageMode && (
                 <div className="flex flex-col gap-1 px-3.5 py-2.5 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700">
                   <span className="font-semibold">Exiba uma planilha do Google Sheets direto na TV.</span>
@@ -568,7 +588,15 @@ export default function QuadroPage() {
                   />
                 )}
 
-                {(selectedBoard.messageMode || (!isStructured && !isSheet && !isGoogle)) && (
+                {isImage && !selectedBoard.messageMode && (
+                  <ImageBoard
+                    key={selectedBoard.id}
+                    imageUrl={selectedBoard.imageUrl || ''}
+                    onChange={updateBoardImageUrl}
+                  />
+                )}
+
+                {(selectedBoard.messageMode || (!isStructured && !isSheet && !isGoogle && !isImage)) && (
                   <Whiteboard
                     key={selectedBoard.id}
                     initialContent={selectedBoard.content}
