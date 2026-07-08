@@ -91,6 +91,7 @@ function splitTimedDescription(description) {
 // ─── HELPERS DE GRADE (semana / mês) ───────────────────────────────────────────
 
 const WEEKDAY_ABBR = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+const WEEK_GRID_COLUMNS = 'repeat(5, minmax(0, 1fr))';
 const AGENDA_GRID_COLUMNS = 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.5fr) minmax(0, 0.5fr)';
 
 // Converte uma chave YYYY-MM-DD em Date "ao meio-dia SP" (evita salto de fuso).
@@ -605,34 +606,23 @@ function EventDescription({ description, size, compact = false }) {
 }
 
 function WeekGrid({ events }) {
-  const keys = weekKeys(2);
+  const keys = weekKeys(1).slice(0, 5);
   const byDay = indexByDay(events);
   const today = todayKey();
 
-  // Fonte escala pelo dia mais cheio das duas semanas (evita estourar as colunas).
+  // Fonte escala pelo dia mais cheio da semana atual (segunda a sexta).
   const maxPerDay = Math.max(1, ...keys.map(k => (byDay.get(k) || []).length));
-  let evSize, timeSize, descSize, nextWeekEvSize, nextWeekTimeSize, nextWeekDescSize, weekendEvSize, weekendTimeSize, weekendDescSize, eventGap, nextWeekEventGap;
-  if (maxPerDay <= 3) { evSize = '0.76vw'; timeSize = '0.68vw'; descSize = '0.56vw'; nextWeekEvSize = '0.66vw'; nextWeekTimeSize = '0.58vw'; nextWeekDescSize = '0.48vw'; weekendEvSize = '0.58vw'; weekendTimeSize = '0.52vw'; weekendDescSize = '0.43vw'; eventGap = '0.25vw'; nextWeekEventGap = '0.16vw'; }
-  else if (maxPerDay <= 6) { evSize = '0.68vw'; timeSize = '0.62vw'; descSize = '0.5vw'; nextWeekEvSize = '0.58vw'; nextWeekTimeSize = '0.52vw'; nextWeekDescSize = '0.42vw'; weekendEvSize = '0.52vw'; weekendTimeSize = '0.48vw'; weekendDescSize = '0.4vw'; eventGap = '0.2vw'; nextWeekEventGap = '0.13vw'; }
-  else { evSize = '0.6vw'; timeSize = '0.55vw'; descSize = '0.46vw'; nextWeekEvSize = '0.52vw'; nextWeekTimeSize = '0.48vw'; nextWeekDescSize = '0.4vw'; weekendEvSize = '0.48vw'; weekendTimeSize = '0.44vw'; weekendDescSize = '0.38vw'; eventGap = '0.16vw'; nextWeekEventGap = '0.1vw'; }
+  let evSize, timeSize, descSize, eventGap;
+  if (maxPerDay <= 3) { evSize = '1.04vw'; timeSize = '0.93vw'; descSize = '0.82vw'; eventGap = '0.36vw'; }
+  else if (maxPerDay <= 6) { evSize = '0.9vw'; timeSize = '0.8vw'; descSize = '0.72vw'; eventGap = '0.3vw'; }
+  else { evSize = '0.76vw'; timeSize = '0.7vw'; descSize = '0.62vw'; eventGap = '0.24vw'; }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: AGENDA_GRID_COLUMNS, gridTemplateRows: 'minmax(0, 1.55fr) minmax(0, 0.9fr)', gap: '0.45vw', height: '100%' }}>
-      {keys.map((key, index) => {
+    <div style={{ display: 'grid', gridTemplateColumns: WEEK_GRID_COLUMNS, gap: '0.5vw', height: '100%' }}>
+      {keys.map((key) => {
         const isToday = key === today;
         const dayEvents = byDay.get(key) || [];
         const wd = weekdayOf(key);
-        const isWeekend = wd === 0 || wd === 6;
-        const isNextWeek = index >= 7;
-        const headerPadding = isWeekend ? '0.28vw 0.16vw' : isNextWeek ? '0.3vw 0.24vw' : '0.42vw 0.28vw';
-        const dayNameSize = isWeekend ? '0.56vw' : isNextWeek ? '0.66vw' : '0.76vw';
-        const dateSize = isWeekend ? '0.5vw' : isNextWeek ? '0.56vw' : '0.66vw';
-        const contentPadding = isWeekend ? '0.2vw' : isNextWeek ? '0.24vw' : '0.34vw';
-        const cardPadding = isWeekend ? '0.18vw 0.22vw' : isNextWeek ? '0.22vw 0.3vw' : '0.28vw 0.36vw';
-        const resolvedEventGap = isNextWeek ? nextWeekEventGap : eventGap;
-        const resolvedTimeSize = isWeekend ? weekendTimeSize : isNextWeek ? nextWeekTimeSize : timeSize;
-        const resolvedEventSize = isWeekend ? weekendEvSize : isNextWeek ? nextWeekEvSize : evSize;
-        const resolvedDescSize = isWeekend ? weekendDescSize : isNextWeek ? nextWeekDescSize : descSize;
         return (
           <div key={key} style={{
             display: 'flex', flexDirection: 'column',
@@ -640,27 +630,27 @@ function WeekGrid({ events }) {
             borderRadius: '6px', overflow: 'hidden', minHeight: 0,
           }}>
             <div style={{
-              textAlign: 'center', padding: headerPadding,
+              textAlign: 'center', padding: '0.56vw 0.3vw',
               background: isToday ? '#00358E' : '#EAF1FB',
               borderBottom: `1px solid ${isToday ? '#00358E' : '#D1D5DB'}`,
             }}>
-              <div style={{ fontSize: dayNameSize, fontWeight: 800, letterSpacing: '0.04em', color: isToday ? '#fff' : '#00358E' }}>
+              <div style={{ fontSize: '0.95vw', fontWeight: 800, letterSpacing: '0.04em', color: isToday ? '#fff' : '#00358E' }}>
                 {WEEKDAY_ABBR[wd]}
               </div>
-              <div style={{ fontSize: dateSize, fontWeight: 500, color: isToday ? 'rgba(255,255,255,0.85)' : '#64748B' }}>
+              <div style={{ fontSize: '0.82vw', fontWeight: 500, color: isToday ? 'rgba(255,255,255,0.85)' : '#64748B' }}>
                 {dayDate(key)}
               </div>
             </div>
-            <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: resolvedEventGap, padding: contentPadding }}>
+            <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: eventGap, padding: '0.4vw' }}>
               {dayEvents.map((event, i) => (
                 <div key={event.id || i} style={{
                   background: '#F8FAFC', borderLeft: '2px solid #00358E', borderRadius: '3px',
-                  padding: cardPadding,
+                  padding: '0.3vw 0.4vw',
                 }}>
-                  <div style={{ fontSize: resolvedTimeSize, fontWeight: 800, color: '#00358E' }}>{eventStartLabel(event)}</div>
-                  <div style={{ fontSize: resolvedEventSize, fontWeight: 600, color: '#1F2937', lineHeight: 1.2 }}>{event.summary}</div>
+                  <div style={{ fontSize: timeSize, fontWeight: 800, color: '#00358E' }}>{eventStartLabel(event)}</div>
+                  <div style={{ fontSize: evSize, fontWeight: 600, color: '#1F2937', lineHeight: 1.2 }}>{event.summary}</div>
                   {event.description && (
-                    <EventDescription description={event.description} size={resolvedDescSize} compact={isWeekend || isNextWeek} />
+                    <EventDescription description={event.description} size={descSize} />
                   )}
                 </div>
               ))}

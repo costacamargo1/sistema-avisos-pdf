@@ -464,11 +464,11 @@ export default function ClientApp({
     if (!agendaId) { setAgendaData(null); return; }
     let cancelled = false;
     // Mês precisa de uma janela maior (grade do mês inteiro + dias da 1ª/última semana);
-    // semana mostra duas semanas completas; lista usa a janela padrão de 7 dias.
+    // semana mostra apenas a semana atual; lista usa a janela padrão de 7 dias.
     const query = agendaView === 'month'
       ? `&days=42&back=7`
       : agendaView === 'week'
-        ? `&days=14&back=7`
+        ? `&days=7&back=7`
         : '';
     const load = async () => {
       try {
