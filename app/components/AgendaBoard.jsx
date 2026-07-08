@@ -61,9 +61,37 @@ function eventStartLabel(event) {
   return event.allDay ? 'Dia todo' : formatTime(event.start);
 }
 
+function splitTimedDescription(description) {
+  const text = String(description || '').replace(/\s+/g, ' ').trim();
+  if (!text) return [];
+
+  const itemStarts = [];
+  const timeStartPattern = /\b\d{1,2}:\d{2}\s*-\s*/g;
+  const rangeContinuationPattern = /^\s*\d{1,2}:\d{2}\s*-\s*$/;
+  let currentItemStart = 0;
+  let match;
+
+  while ((match = timeStartPattern.exec(text)) !== null) {
+    const beforeMatch = text.slice(currentItemStart, match.index);
+    const isRangeEnd = rangeContinuationPattern.test(beforeMatch);
+
+    if (match.index === 0 || !isRangeEnd) {
+      itemStarts.push(match.index);
+      currentItemStart = match.index;
+    }
+  }
+
+  if (itemStarts.length < 2) return [];
+
+  return itemStarts
+    .map((start, i) => text.slice(start, itemStarts[i + 1] ?? text.length).trim())
+    .filter(Boolean);
+}
+
 // ─── HELPERS DE GRADE (semana / mês) ───────────────────────────────────────────
 
 const WEEKDAY_ABBR = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+const AGENDA_GRID_COLUMNS = 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.5fr) minmax(0, 0.5fr)';
 
 // Converte uma chave YYYY-MM-DD em Date "ao meio-dia SP" (evita salto de fuso).
 function dateFromKey(key) {
@@ -81,14 +109,14 @@ function weekdayOf(key) {
   return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(wd);
 }
 
-// Gera as chaves dos 7 dias da semana que contém `todayKey`, começando na segunda.
-function weekKeys() {
+// Gera as chaves de semanas completas que contêm `todayKey`, começando na segunda.
+function weekKeys(weekCount = 1) {
   const today = todayKey();
   const wd = weekdayOf(today);            // 0=Dom … 6=Sáb
   const offsetToMonday = wd === 0 ? -6 : 1 - wd;
   const base = dateFromKey(today);
   const keys = [];
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < weekCount * 7; i++) {
     const d = new Date(base.getTime() + (offsetToMonday + i) * 24 * 60 * 60 * 1000);
     keys.push(keyFromDate(d));
   }
@@ -539,24 +567,72 @@ export function AgendaDisplay({ boardTitle, events = [], titleStyle: rawTitleSty
 
 // ─── GRADE SEMANAL (7 colunas SEG–DOM) ─────────────────────────────────────────
 
+function EventDescription({ description, size, compact = false }) {
+  const timedItems = splitTimedDescription(description);
+
+  if (timedItems.length > 0) {
+    return (
+      <div style={{
+        fontSize: size,
+        color: '#475569',
+        lineHeight: 1.2,
+        marginTop: '0.16vw',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: compact ? '0.08vw' : '0.1vw',
+      }}>
+        {timedItems.map((item, i) => {
+          const match = item.match(/^(\d{1,2}:\d{2}\s*-\s*(?:(?:\d{1,2}:\d{2}|\d{1,2}\s*H(?:RS)?)\s*-\s*)?)(.*)$/i);
+          const timePart = match?.[1]?.trim();
+          const body = match?.[2]?.trim();
+
+          return (
+            <div key={`${item}-${i}`} style={{ whiteSpace: 'normal' }}>
+              {timePart ? <span style={{ fontWeight: 800, color: '#00358E' }}>{timePart} </span> : null}
+              <span>{body || item}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ fontSize: size, color: '#6B7280', lineHeight: 1.25, marginTop: '0.1vw' }}>
+      {description}
+    </div>
+  );
+}
+
 function WeekGrid({ events }) {
-  const keys = weekKeys();
+  const keys = weekKeys(2);
   const byDay = indexByDay(events);
   const today = todayKey();
 
-  // Fonte escala pelo dia mais cheio da semana (evita estourar as colunas).
+  // Fonte escala pelo dia mais cheio das duas semanas (evita estourar as colunas).
   const maxPerDay = Math.max(1, ...keys.map(k => (byDay.get(k) || []).length));
-  let evSize, timeSize, descSize;
-  if (maxPerDay <= 3) { evSize = '0.95vw'; timeSize = '0.85vw'; descSize = '0.72vw'; }
-  else if (maxPerDay <= 6) { evSize = '0.8vw'; timeSize = '0.72vw'; descSize = '0.62vw'; }
-  else { evSize = '0.68vw'; timeSize = '0.62vw'; descSize = '0.55vw'; }
+  let evSize, timeSize, descSize, nextWeekEvSize, nextWeekTimeSize, nextWeekDescSize, weekendEvSize, weekendTimeSize, weekendDescSize, eventGap, nextWeekEventGap;
+  if (maxPerDay <= 3) { evSize = '0.76vw'; timeSize = '0.68vw'; descSize = '0.56vw'; nextWeekEvSize = '0.66vw'; nextWeekTimeSize = '0.58vw'; nextWeekDescSize = '0.48vw'; weekendEvSize = '0.58vw'; weekendTimeSize = '0.52vw'; weekendDescSize = '0.43vw'; eventGap = '0.25vw'; nextWeekEventGap = '0.16vw'; }
+  else if (maxPerDay <= 6) { evSize = '0.68vw'; timeSize = '0.62vw'; descSize = '0.5vw'; nextWeekEvSize = '0.58vw'; nextWeekTimeSize = '0.52vw'; nextWeekDescSize = '0.42vw'; weekendEvSize = '0.52vw'; weekendTimeSize = '0.48vw'; weekendDescSize = '0.4vw'; eventGap = '0.2vw'; nextWeekEventGap = '0.13vw'; }
+  else { evSize = '0.6vw'; timeSize = '0.55vw'; descSize = '0.46vw'; nextWeekEvSize = '0.52vw'; nextWeekTimeSize = '0.48vw'; nextWeekDescSize = '0.4vw'; weekendEvSize = '0.48vw'; weekendTimeSize = '0.44vw'; weekendDescSize = '0.38vw'; eventGap = '0.16vw'; nextWeekEventGap = '0.1vw'; }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.5vw', height: '100%' }}>
-      {keys.map((key) => {
+    <div style={{ display: 'grid', gridTemplateColumns: AGENDA_GRID_COLUMNS, gridTemplateRows: 'minmax(0, 1.55fr) minmax(0, 0.9fr)', gap: '0.45vw', height: '100%' }}>
+      {keys.map((key, index) => {
         const isToday = key === today;
         const dayEvents = byDay.get(key) || [];
         const wd = weekdayOf(key);
+        const isWeekend = wd === 0 || wd === 6;
+        const isNextWeek = index >= 7;
+        const headerPadding = isWeekend ? '0.28vw 0.16vw' : isNextWeek ? '0.3vw 0.24vw' : '0.42vw 0.28vw';
+        const dayNameSize = isWeekend ? '0.56vw' : isNextWeek ? '0.66vw' : '0.76vw';
+        const dateSize = isWeekend ? '0.5vw' : isNextWeek ? '0.56vw' : '0.66vw';
+        const contentPadding = isWeekend ? '0.2vw' : isNextWeek ? '0.24vw' : '0.34vw';
+        const cardPadding = isWeekend ? '0.18vw 0.22vw' : isNextWeek ? '0.22vw 0.3vw' : '0.28vw 0.36vw';
+        const resolvedEventGap = isNextWeek ? nextWeekEventGap : eventGap;
+        const resolvedTimeSize = isWeekend ? weekendTimeSize : isNextWeek ? nextWeekTimeSize : timeSize;
+        const resolvedEventSize = isWeekend ? weekendEvSize : isNextWeek ? nextWeekEvSize : evSize;
+        const resolvedDescSize = isWeekend ? weekendDescSize : isNextWeek ? nextWeekDescSize : descSize;
         return (
           <div key={key} style={{
             display: 'flex', flexDirection: 'column',
@@ -564,27 +640,27 @@ function WeekGrid({ events }) {
             borderRadius: '6px', overflow: 'hidden', minHeight: 0,
           }}>
             <div style={{
-              textAlign: 'center', padding: '0.5vw 0.3vw',
+              textAlign: 'center', padding: headerPadding,
               background: isToday ? '#00358E' : '#EAF1FB',
               borderBottom: `1px solid ${isToday ? '#00358E' : '#D1D5DB'}`,
             }}>
-              <div style={{ fontSize: '0.85vw', fontWeight: 800, letterSpacing: '0.04em', color: isToday ? '#fff' : '#00358E' }}>
+              <div style={{ fontSize: dayNameSize, fontWeight: 800, letterSpacing: '0.04em', color: isToday ? '#fff' : '#00358E' }}>
                 {WEEKDAY_ABBR[wd]}
               </div>
-              <div style={{ fontSize: '0.75vw', fontWeight: 500, color: isToday ? 'rgba(255,255,255,0.85)' : '#64748B' }}>
+              <div style={{ fontSize: dateSize, fontWeight: 500, color: isToday ? 'rgba(255,255,255,0.85)' : '#64748B' }}>
                 {dayDate(key)}
               </div>
             </div>
-            <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0.35vw', padding: '0.4vw' }}>
+            <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: resolvedEventGap, padding: contentPadding }}>
               {dayEvents.map((event, i) => (
                 <div key={event.id || i} style={{
                   background: '#F8FAFC', borderLeft: '2px solid #00358E', borderRadius: '3px',
-                  padding: '0.3vw 0.4vw',
+                  padding: cardPadding,
                 }}>
-                  <div style={{ fontSize: timeSize, fontWeight: 800, color: '#00358E' }}>{eventStartLabel(event)}</div>
-                  <div style={{ fontSize: evSize, fontWeight: 600, color: '#1F2937', lineHeight: 1.2 }}>{event.summary}</div>
+                  <div style={{ fontSize: resolvedTimeSize, fontWeight: 800, color: '#00358E' }}>{eventStartLabel(event)}</div>
+                  <div style={{ fontSize: resolvedEventSize, fontWeight: 600, color: '#1F2937', lineHeight: 1.2 }}>{event.summary}</div>
                   {event.description && (
-                    <div style={{ fontSize: descSize, color: '#6B7280', lineHeight: 1.25, marginTop: '0.1vw' }}>{event.description}</div>
+                    <EventDescription description={event.description} size={resolvedDescSize} compact={isWeekend || isNextWeek} />
                   )}
                 </div>
               ))}
@@ -608,16 +684,20 @@ function MonthGrid({ events }) {
       <div style={{ textAlign: 'center', fontSize: '1.1vw', fontWeight: 800, color: '#00358E', letterSpacing: '0.04em' }}>
         {monthLabel(month, year)}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.3vw' }}>
-        {['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'].map(d => (
-          <div key={d} style={{ textAlign: 'center', fontSize: '0.75vw', fontWeight: 700, color: '#64748B', padding: '0.2vw 0' }}>{d}</div>
-        ))}
+      <div style={{ display: 'grid', gridTemplateColumns: AGENDA_GRID_COLUMNS, gap: '0.3vw' }}>
+        {['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'].map((d, i) => {
+          const isWeekend = i >= 5;
+          return (
+            <div key={d} style={{ textAlign: 'center', fontSize: isWeekend ? '0.56vw' : '0.75vw', fontWeight: 700, color: '#64748B', padding: '0.2vw 0' }}>{d}</div>
+          );
+        })}
       </div>
       <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateRows: `repeat(${weeks.length}, 1fr)`, gap: '0.3vw' }}>
         {weeks.map((week, wi) => (
-          <div key={wi} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.3vw', minHeight: 0 }}>
-            {week.map(({ key, inMonth }) => {
+          <div key={wi} style={{ display: 'grid', gridTemplateColumns: AGENDA_GRID_COLUMNS, gap: '0.3vw', minHeight: 0 }}>
+            {week.map(({ key, inMonth }, di) => {
               const isToday = key === today;
+              const isWeekend = di >= 5;
               const dayEvents = byDay.get(key) || [];
               return (
                 <div key={key} style={{
@@ -628,16 +708,18 @@ function MonthGrid({ events }) {
                   opacity: inMonth ? 1 : 0.55,
                 }}>
                   <div style={{
-                    fontSize: '0.7vw', fontWeight: 700, padding: '0.15vw 0.35vw',
+                    fontSize: isWeekend ? '0.54vw' : '0.7vw',
+                    fontWeight: 700,
+                    padding: isWeekend ? '0.1vw 0.16vw' : '0.15vw 0.35vw',
                     color: isToday ? '#fff' : '#334155',
                     background: isToday ? '#00358E' : 'transparent',
                   }}>
                     {Number(key.slice(8, 10))}
                   </div>
-                  <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0.12vw', padding: '0 0.25vw 0.2vw' }}>
+                  <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0.12vw', padding: isWeekend ? '0 0.12vw 0.14vw' : '0 0.25vw 0.2vw' }}>
                     {dayEvents.map((event, i) => (
                       <div key={event.id || i} style={{
-                        fontSize: '0.62vw', lineHeight: 1.15, color: '#1F2937',
+                        fontSize: isWeekend ? '0.47vw' : '0.62vw', lineHeight: 1.15, color: '#1F2937',
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         background: '#EAF1FB', borderRadius: '2px', padding: '0.05vw 0.25vw',
                       }}>
