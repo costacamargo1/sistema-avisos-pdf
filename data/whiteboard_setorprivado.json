@@ -83,13 +83,14 @@
     "content": null,
     "isVisible": true,
     "messageMode": false,
-    "boardMode": "image",
+    "boardMode": "agenda",
     "structuredItems": [],
     "sheetItems": [],
     "sheetHeaders": {},
     "googleSheetUrl": "",
     "titleStyle": null,
     "isMainScreen": false,
-    "imageUrl": ""
+    "imageUrl": "",
+    "calendarId": "https://calendar.google.com/calendar/embed?src=costacamargoltda%40gmail.com&ctz=America%2FSao_Paulo"
   }
 ]

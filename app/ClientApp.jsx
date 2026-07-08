@@ -10,6 +10,7 @@ import {
 import Link from 'next/link';
 import Whiteboard from './components/Whiteboard';
 import { GoogleSheetDisplay } from './components/SheetBoard';
+import { AgendaDisplay } from './components/AgendaBoard';
 
 const GOOGLE_SHEET_REFRESH_MS = 20 * 60 * 1000; // 20 minutos
 
@@ -47,12 +48,14 @@ export default function ClientApp({
 
   const [googleData, setGoogleData] = useState(null); // { headers, rows, title }
   const [googleRefreshKey, setGoogleRefreshKey] = useState(0);
+  const [agendaData, setAgendaData] = useState(null); // { title, events }
 
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
   const currentBoard = visibleBoards[currentBoardIndex] || visibleBoards[0] || null;
   const isGoogleBoard = tvPhase === 'whiteboard' && currentBoard?.boardMode === 'google';
   const isImageBoard = tvPhase === 'whiteboard' && currentBoard?.boardMode === 'image' && !currentBoard?.messageMode;
+  const isAgendaBoard = tvPhase === 'whiteboard' && currentBoard?.boardMode === 'agenda' && !currentBoard?.messageMode;
 
   const fitScaleContain = async (doc, pageNum, isTv = false) => {
     const container = viewerRef.current;
@@ -124,6 +127,8 @@ export default function ClientApp({
         if (board?.isVisible === false) return false;
         // Quadro de imagem só entra na rotação depois do upload da imagem.
         if (board?.boardMode === 'image' && !board?.messageMode && !board?.imageUrl) return false;
+        // Quadro de agenda só entra na rotação depois de conectar uma agenda.
+        if (board?.boardMode === 'agenda' && !board?.messageMode && !board?.calendarId) return false;
         return true;
       });
       const mainScreenBoard = visibleBoards.find(board => board?.isMainScreen === true);
@@ -452,6 +457,23 @@ export default function ClientApp({
     return () => { cancelled = true; clearInterval(id); };
   }, [googleUrl, googleRefreshKey]);
 
+  // Busca os eventos do Google Agenda para o quadro atual e atualiza a cada 20 min.
+  const agendaId = isAgendaBoard ? (currentBoard?.calendarId || '') : '';
+  useEffect(() => {
+    if (!agendaId) { setAgendaData(null); return; }
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/calendar?calendar=${encodeURIComponent(agendaId)}`, { cache: 'no-store' });
+        const data = await res.json().catch(() => null);
+        if (!cancelled && res.ok && data) setAgendaData(data);
+      } catch {}
+    };
+    load();
+    const id = setInterval(load, GOOGLE_SHEET_REFRESH_MS);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [agendaId]);
+
   // Efeito para redimensionamento e renderização ao mudar página ou entrar em TV mode
   useEffect(() => {
     if (!tvMode || !pdfDoc) return;
@@ -750,6 +772,15 @@ export default function ClientApp({
             />
           )}
 
+          {tvPhase === 'whiteboard' && currentBoard && isAgendaBoard && (
+            <AgendaDisplay
+              key={currentBoard.id || `ag-${currentBoardIndex}`}
+              boardTitle={currentBoard.title || ''}
+              events={agendaData?.events || []}
+              titleStyle={currentBoard.titleStyle || null}
+            />
+          )}
+
           {tvPhase === 'whiteboard' && currentBoard && isImageBoard && (
             <img
               key={currentBoard.id || `img-${currentBoardIndex}`}
@@ -759,7 +790,7 @@ export default function ClientApp({
             />
           )}
 
-          {tvPhase === 'whiteboard' && currentBoard && !isGoogleBoard && !isImageBoard && (
+          {tvPhase === 'whiteboard' && currentBoard && !isGoogleBoard && !isImageBoard && !isAgendaBoard && (
             <Whiteboard
               key={currentBoard.id || `wb-${currentBoardIndex}`}
               initialContent={currentBoard.content}

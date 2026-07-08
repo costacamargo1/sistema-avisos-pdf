@@ -13,6 +13,7 @@ import StructuredBoard from '../../components/StructuredBoard';
 import SheetBoard from '../../components/SheetBoard';
 import GoogleSheetSync from '../../components/GoogleSheetSync';
 import ImageBoard from '../../components/ImageBoard';
+import AgendaSync from '../../components/AgendaBoard';
 
 const BASE_MODE_OPTIONS = [
   { value: 'structured', label: 'Lista estruturada' },
@@ -21,6 +22,7 @@ const BASE_MODE_OPTIONS = [
 const SHEET_MODE_OPTION = { value: 'sheet', label: 'Planilha' };
 const GOOGLE_MODE_OPTION = { value: 'google', label: 'Sincronizar com Google' };
 const IMAGE_MODE_OPTION = { value: 'image', label: 'Imagem' };
+const AGENDA_MODE_OPTION = { value: 'agenda', label: 'Agenda Google' };
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
@@ -111,6 +113,7 @@ export default function QuadroPage() {
             sheetHeaders: board.sheetHeaders || {},
             googleSheetUrl: board.googleSheetUrl || '',
             imageUrl: board.imageUrl || '',
+            calendarId: board.calendarId || '',
             titleStyle: board.titleStyle || null,
             isMainScreen: Boolean(board?.isMainScreen),
           }));
@@ -182,7 +185,7 @@ export default function QuadroPage() {
       id: generateId(), title: `Quadro ${boards.length + 1}`,
       content: null, isVisible: true, messageMode: false,
       boardMode: 'structured', structuredItems: [], sheetItems: [], sheetHeaders: {},
-      googleSheetUrl: '', imageUrl: '',
+      googleSheetUrl: '', imageUrl: '', calendarId: '',
       titleStyle: null,
       isMainScreen: false,
     };
@@ -197,7 +200,7 @@ export default function QuadroPage() {
     if (!confirm('Tem certeza que deseja excluir este quadro?')) return;
     const updated = boards.filter(b => b.id !== id);
     if (updated.length === 0) {
-      const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false, boardMode: 'structured', structuredItems: [], sheetItems: [], sheetHeaders: {}, googleSheetUrl: '', imageUrl: '', titleStyle: null, isMainScreen: false };
+      const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false, boardMode: 'structured', structuredItems: [], sheetItems: [], sheetHeaders: {}, googleSheetUrl: '', imageUrl: '', calendarId: '', titleStyle: null, isMainScreen: false };
       updated.push(def);
     }
     saveBoards(updated);
@@ -303,16 +306,21 @@ export default function QuadroPage() {
     saveBoards(boards.map(b => b.id === selectedId ? { ...b, imageUrl } : b));
   };
 
+  const updateBoardCalendarId = (calendarId) => {
+    saveBoards(boards.map(b => b.id === selectedId ? { ...b, calendarId } : b));
+  };
+
   const selectedBoard = boards.find(b => b.id === selectedId);
   const isStructured = selectedBoard?.boardMode === 'structured';
   const isSheet = selectedBoard?.boardMode === 'sheet';
   const isGoogle = selectedBoard?.boardMode === 'google';
   const isImage = selectedBoard?.boardMode === 'image';
+  const isAgenda = selectedBoard?.boardMode === 'agenda';
   // Planilha e Sincronização com Google disponíveis em Cotação e Setor Privado (Pregão usa só os modos base).
-  // Imagem disponível em todas as categorias.
+  // Imagem e Agenda Google disponíveis em todas as categorias.
   const modeOptions = (category === 'cotacao' || category === 'setorprivado')
-    ? [...BASE_MODE_OPTIONS, SHEET_MODE_OPTION, GOOGLE_MODE_OPTION, IMAGE_MODE_OPTION]
-    : [...BASE_MODE_OPTIONS, IMAGE_MODE_OPTION];
+    ? [...BASE_MODE_OPTIONS, SHEET_MODE_OPTION, GOOGLE_MODE_OPTION, IMAGE_MODE_OPTION, AGENDA_MODE_OPTION]
+    : [...BASE_MODE_OPTIONS, IMAGE_MODE_OPTION, AGENDA_MODE_OPTION];
 
   if (loading) {
     return (
@@ -402,7 +410,7 @@ export default function QuadroPage() {
                       </span>
                     )}
                   </div>
-                  {(!board.isVisible || board.messageMode || board.boardMode === 'structured' || board.boardMode === 'image' || board.isMainScreen) && (
+                  {(!board.isVisible || board.messageMode || board.boardMode === 'structured' || board.boardMode === 'image' || board.boardMode === 'agenda' || board.isMainScreen) && (
                     <div className="flex gap-1.5 mt-1.5 pl-[42px] flex-wrap">
                       {board.isMainScreen && (
                         <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">Tela principal</span>
@@ -412,6 +420,9 @@ export default function QuadroPage() {
                       )}
                       {board.boardMode === 'image' && (
                         <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-100">Imagem</span>
+                      )}
+                      {board.boardMode === 'agenda' && (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">Agenda</span>
                       )}
                       {board.messageMode && (
                         <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 border border-purple-100">Mensagem</span>
@@ -542,6 +553,16 @@ export default function QuadroPage() {
                 </div>
               )}
 
+              {isAgenda && !selectedBoard.messageMode && (
+                <div className="flex flex-col gap-1 px-3.5 py-2.5 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700">
+                  <span className="font-semibold">Exiba uma agenda do Google Agenda direto na TV (próximos 7 dias).</span>
+                  <span>
+                    Peça ao dono da agenda: no Google Agenda → configurações da agenda → <strong>Compartilhar com pessoas específicas</strong> → adicionar o e-mail da conta de serviço (mostrado abaixo) com permissão de <strong>ver os eventos</strong>.
+                    Depois, copie o <strong>ID da agenda</strong> (na seção “Integrar agenda”) e cole no campo abaixo. Tudo que a pessoa criar ou editar na agenda aparece na TV automaticamente.
+                  </span>
+                </div>
+              )}
+
               {isGoogle && !selectedBoard.messageMode && (
                 <div className="flex flex-col gap-1 px-3.5 py-2.5 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700">
                   <span className="font-semibold">Exiba uma planilha do Google Sheets direto na TV.</span>
@@ -596,7 +617,15 @@ export default function QuadroPage() {
                   />
                 )}
 
-                {(selectedBoard.messageMode || (!isStructured && !isSheet && !isGoogle && !isImage)) && (
+                {isAgenda && !selectedBoard.messageMode && (
+                  <AgendaSync
+                    key={selectedBoard.id}
+                    initialId={selectedBoard.calendarId || ''}
+                    onIdChange={updateBoardCalendarId}
+                  />
+                )}
+
+                {(selectedBoard.messageMode || (!isStructured && !isSheet && !isGoogle && !isImage && !isAgenda)) && (
                   <Whiteboard
                     key={selectedBoard.id}
                     initialContent={selectedBoard.content}
