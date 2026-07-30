@@ -1,0 +1,70 @@
+[
+  {
+    "id": "default",
+    "title": "Quadro 1",
+    "titleStyle": null,
+    "content": {
+      "title": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": "center"
+            },
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "textStyle",
+                    "attrs": {
+                      "fontFamily": "Montserrat",
+                      "fontSize": "58px",
+                      "lineHeight": null,
+                      "color": "#00358E"
+                    }
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "Quadro 1"
+              }
+            ]
+          }
+        ]
+      },
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "textAlign": null
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "Bem-vindo ao Quadro de Avisos!"
+              }
+            ]
+          }
+        ]
+      },
+      "logoLayout": "bottom-right-small",
+      "verticalAlign": "top"
+    },
+    "isVisible": true,
+    "messageMode": false,
+    "isMainScreen": false,
+    "boardMode": "rich",
+    "structuredItems": [],
+    "sheetItems": [],
+    "sheetHeaders": {},
+    "googleSheetUrl": "",
+    "imageUrl": "",
+    "calendarId": "",
+    "agendaView": "list"
+  }
+]

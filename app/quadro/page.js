@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ChevronLeft, LayoutTemplate, FileText, Building2 } from 'lucide-react';
+import { ChevronLeft, LayoutTemplate, FileText, Building2, FileSignature } from 'lucide-react';
 
 const OPTIONS = [
   {
@@ -19,6 +19,11 @@ const OPTIONS = [
     href: '/quadro/setorprivado',
     title: 'AVISOS\nSETOR\nPRIVADO',
     icon: Building2,
+  },
+  {
+    href: '/quadro/contratospriv',
+    title: 'AVISOS\nCONTRATOS\nPRIVADO',
+    icon: FileSignature,
   },
 ];
 

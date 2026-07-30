@@ -30,12 +30,14 @@ const CATEGORY_LABELS = {
   pregao: 'Pregão Eletrônico',
   cotacao: 'Cotação',
   setorprivado: 'Setor Privado',
+  contratospriv: 'Contratos Privado',
 };
 
 const PANEL_HREFS = {
   pregao: '/',
   cotacao: '/cotacao',
   setorprivado: '/setorprivado',
+  contratospriv: '/contratospriv',
 };
 
 const VALID_CATEGORIES = new Set(Object.keys(CATEGORY_LABELS));
@@ -106,6 +108,10 @@ export default function QuadroPage() {
         if (Array.isArray(data) && data.length > 0) {
           const normalized = data.map(board => ({
             ...board,
+            // Títulos legados podem vir como doc ProseMirror; aqui é sempre string.
+            title: typeof board?.title === 'string'
+              ? board.title
+              : (extractTextFromNode(board?.title).replace(/\s+/g, ' ').trim() || 'Quadro'),
             messageMode: Boolean(board?.messageMode),
             boardMode: board.boardMode || 'rich',
             structuredItems: board.structuredItems || [],
@@ -321,9 +327,9 @@ export default function QuadroPage() {
   const isGoogle = selectedBoard?.boardMode === 'google';
   const isImage = selectedBoard?.boardMode === 'image';
   const isAgenda = selectedBoard?.boardMode === 'agenda';
-  // Planilha e Sincronização com Google disponíveis em Cotação e Setor Privado (Pregão usa só os modos base).
+  // Planilha e Sincronização com Google disponíveis em Cotação, Setor Privado e Contratos Privado (Pregão usa só os modos base).
   // Imagem e Agenda Google disponíveis em todas as categorias.
-  const modeOptions = (category === 'cotacao' || category === 'setorprivado')
+  const modeOptions = (category === 'cotacao' || category === 'setorprivado' || category === 'contratospriv')
     ? [...BASE_MODE_OPTIONS, SHEET_MODE_OPTION, GOOGLE_MODE_OPTION, IMAGE_MODE_OPTION, AGENDA_MODE_OPTION]
     : [...BASE_MODE_OPTIONS, IMAGE_MODE_OPTION, AGENDA_MODE_OPTION];
 

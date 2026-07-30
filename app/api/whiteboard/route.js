@@ -11,6 +11,7 @@ const CATEGORY_STORAGE = {
     pregao:       { redisKey: 'whiteboard_data',               file: 'whiteboard.json' },
     cotacao:      { redisKey: 'whiteboard_data_cotacao',       file: 'whiteboard_cotacao.json' },
     setorprivado: { redisKey: 'whiteboard_data_setorprivado',  file: 'whiteboard_setorprivado.json' },
+    contratospriv: { redisKey: 'whiteboard_data_contratospriv', file: 'whiteboard_contratospriv.json' },
 };
 
 function resolveKeys(rawCategory) {
@@ -44,36 +45,14 @@ async function ensureDir() {
 }
 
 // Helper to get default initial state
+// `title` é sempre string simples: o gerenciador renderiza board.title direto
+// e o usa como value de input. Estilo do título fica em titleStyle.
 function getDefaultState() {
     return [
         {
             id: 'default',
-            title: {
-                type: 'doc',
-                content: [
-                    {
-                        type: 'paragraph',
-                        attrs: { textAlign: 'center' },
-                        content: [
-                            {
-                                type: 'text',
-                                marks: [
-                                    {
-                                        type: 'textStyle',
-                                        attrs: {
-                                            fontFamily: 'Montserrat',
-                                            fontSize: '44px',
-                                            color: '#00358E'
-                                        }
-                                    },
-                                    { type: 'bold' }
-                                ],
-                                text: 'TÍTULO'
-                            }
-                        ]
-                    }
-                ]
-            },
+            title: 'Quadro 1',
+            titleStyle: null,
             content: {
                 type: 'doc',
                 content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Bem-vindo ao Quadro de Avisos!' }] }]
