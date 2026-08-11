@@ -22,6 +22,107 @@ function parseGid(input) {
   return match ? match[1] : null;
 }
 
+// Teto de linhas lidas com formatação (protege o payload em planilhas grandes).
+const MAX_GRID_ROWS = 300;
+
+// Só os campos de formatação que o painel usa — mantém a resposta enxuta.
+const GRID_FIELDS = 'sheets(merges,data(columnMetadata(pixelSize),rowData(values(formattedValue,effectiveFormat(backgroundColor,horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)))))';
+
+// Índice 0 → "A", 25 → "Z", 26 → "AA".
+function colLetter(index) {
+  let n = index + 1;
+  let out = '';
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    out = String.fromCharCode(65 + rem) + out;
+    n = Math.floor((n - 1) / 26);
+  }
+  return out;
+}
+
+// Notação A1 com o nome da aba entre aspas (aspas internas são duplicadas).
+function a1Range(title, ref) {
+  return `'${String(title).replace(/'/g, "''")}'!${ref}`;
+}
+
+// Cor do Sheets ({red,green,blue} de 0 a 1) → hex. Canal ausente = 0.
+function hexColor(color) {
+  if (!color) return null;
+  const channel = (v) => Math.round(Math.max(0, Math.min(1, Number(v) || 0)) * 255);
+  return `#${[channel(color.red), channel(color.green), channel(color.blue)]
+    .map(v => v.toString(16).padStart(2, '0'))
+    .join('')}`;
+}
+
+// Célula compacta: chaves curtas e só o que difere do padrão (payload menor).
+// v=valor b=negrito i=itálico u=sublinhado s=riscado fs=corpo ff=fonte
+// bg=fundo fg=cor do texto ha/va=alinhamento w=quebra de linha
+function compactCell(cell) {
+  const out = { v: cell?.formattedValue ?? '' };
+  const format = cell?.effectiveFormat;
+  if (!format) return out;
+
+  const background = hexColor(format.backgroundColor);
+  if (background && background !== '#ffffff') out.bg = background;
+
+  const text = format.textFormat || {};
+  const foreground = hexColor(text.foregroundColor);
+  if (foreground && foreground !== '#000000') out.fg = foreground;
+  if (text.bold) out.b = 1;
+  if (text.italic) out.i = 1;
+  if (text.underline) out.u = 1;
+  if (text.strikethrough) out.s = 1;
+  if (text.fontSize) out.fs = text.fontSize;
+  if (text.fontFamily) out.ff = text.fontFamily;
+
+  if (format.horizontalAlignment) out.ha = format.horizontalAlignment;
+  if (format.verticalAlignment) out.va = format.verticalAlignment;
+  if (format.wrapStrategy === 'WRAP') out.w = 1;
+  return out;
+}
+
+// Lê a mesma faixa de dados novamente, agora com a formatação original da planilha.
+// Retorna null em qualquer falha: o painel simplesmente cai no estilo do projeto.
+async function fetchGrid(client, spreadsheetId, title, rowCount, colCount) {
+  try {
+    const ref = `A1:${colLetter(colCount - 1)}${Math.min(rowCount, MAX_GRID_ROWS)}`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`
+      + `?includeGridData=true&ranges=${encodeURIComponent(a1Range(title, ref))}`
+      + `&fields=${encodeURIComponent(GRID_FIELDS)}`;
+    const res = await client.request({ url });
+
+    const sheet = res.data?.sheets?.[0];
+    const data = sheet?.data?.[0];
+    if (!data) return null;
+
+    const cells = (data.rowData || []).map(row => {
+      const values = row?.values || [];
+      const line = [];
+      for (let i = 0; i < colCount; i++) line.push(compactCell(values[i]));
+      return line;
+    });
+
+    const cols = [];
+    for (let i = 0; i < colCount; i++) cols.push(data.columnMetadata?.[i]?.pixelSize || 100);
+
+    // Merges vêm em coordenadas absolutas da aba; a faixa começa em A1, então batem direto.
+    const merges = (sheet.merges || [])
+      .filter(m => m.startRowIndex < cells.length && m.startColumnIndex < colCount)
+      .map(m => ({
+        r: m.startRowIndex,
+        c: m.startColumnIndex,
+        rs: Math.min(m.endRowIndex, cells.length) - m.startRowIndex,
+        cs: Math.min(m.endColumnIndex, colCount) - m.startColumnIndex,
+      }))
+      .filter(m => m.rs > 0 && m.cs > 0 && (m.rs > 1 || m.cs > 1));
+
+    return { cols, merges, cells };
+  } catch (error) {
+    console.error('Erro ao ler formatação da planilha:', error?.message || error);
+    return null;
+  }
+}
+
 function loadServiceAccount() {
   const b64 = process.env.GOOGLE_SERVICE_ACCOUNT_B64;
   const raw = process.env.GOOGLE_SERVICE_ACCOUNT;
@@ -109,7 +210,14 @@ export async function GET(request) {
       return cells;
     });
 
-    return NextResponse.json({ headers, rows, title });
+    // A formatação original só é buscada sob demanda (?format=1) — é uma
+    // requisição a mais e o estilo do projeto não precisa dela.
+    const wantsFormat = searchParams.get('format') === '1';
+    const grid = wantsFormat
+      ? await fetchGrid(client, spreadsheetId, title, values.length, colCount)
+      : null;
+
+    return NextResponse.json(grid ? { headers, rows, title, grid } : { headers, rows, title });
   } catch (error) {
     const status = error?.response?.status;
     if (status === 403) {

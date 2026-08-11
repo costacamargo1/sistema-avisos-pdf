@@ -1,15 +1,17 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { RefreshCw, ExternalLink, CheckCircle2, AlertCircle, Link2 } from 'lucide-react';
+import { googleCellCss, googleMergeMaps } from './SheetBoard';
 
 const SERVICE_ACCOUNT_HINT = 'Compartilhe a planilha (como Leitor) com o e-mail da conta de serviço do painel.';
 
-export default function GoogleSheetSync({ initialUrl = '', onUrlChange }) {
+export default function GoogleSheetSync({ initialUrl = '', onUrlChange, initialStyle = 'project', onStyleChange }) {
   const [url, setUrl] = useState(initialUrl);
+  const [style, setStyle] = useState(initialStyle || 'project'); // project | sheet
   const [status, setStatus] = useState('idle'); // idle | loading | ok | error
   const [error, setError] = useState('');
-  const [preview, setPreview] = useState(null); // { headers, rows, title }
+  const [preview, setPreview] = useState(null); // { headers, rows, title, grid }
   const saveTimer = useRef(null);
 
   const persistUrl = useCallback((value) => {
@@ -28,7 +30,8 @@ export default function GoogleSheetSync({ initialUrl = '', onUrlChange }) {
     setStatus('loading');
     setError('');
     try {
-      const res = await fetch(`/api/sheets?url=${encodeURIComponent(target)}`, { cache: 'no-store' });
+      // O editor sempre pede a formatação: assim alternar o estilo é instantâneo.
+      const res = await fetch(`/api/sheets?url=${encodeURIComponent(target)}&format=1`, { cache: 'no-store' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setStatus('error');
@@ -56,7 +59,18 @@ export default function GoogleSheetSync({ initialUrl = '', onUrlChange }) {
     persistUrl(value);
   };
 
+  const handleStyleChange = (value) => {
+    setStyle(value);
+    onStyleChange?.(value);
+  };
+
   const colCount = preview?.headers?.length || 0;
+
+  // Espelho da planilha original — só quando a formatação veio junto.
+  const grid = preview?.grid || null;
+  const mirror = style === 'sheet' && (grid?.cells?.length || 0) > 0;
+  const { anchors, covered } = useMemo(() => googleMergeMaps(grid?.merges), [grid?.merges]);
+  const gridTotalWidth = (grid?.cols || []).reduce((sum, w) => sum + w, 0) || 1;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -161,9 +175,78 @@ export default function GoogleSheetSync({ initialUrl = '', onUrlChange }) {
         )}
       </div>
 
+      {/* Seletor de formatação — como a planilha aparece na TV */}
+      <div style={{ padding: '2px 16px 8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '11px', color: 'var(--color-text-tertiary)', fontWeight: 500 }}>Formatação na TV:</span>
+        <div style={{ display: 'inline-flex', border: '1px solid #CBD5E1', borderRadius: 'var(--border-radius-md)', overflow: 'hidden' }}>
+          {[
+            { id: 'project', label: 'Padrão do painel' },
+            { id: 'sheet', label: 'Original da planilha' },
+          ].map((opt, i) => {
+            const active = style === opt.id;
+            return (
+              <button
+                key={opt.id}
+                onClick={() => handleStyleChange(opt.id)}
+                style={{
+                  padding: '5px 12px', fontSize: '12px', fontWeight: 600,
+                  border: 'none', cursor: 'pointer',
+                  borderLeft: i > 0 ? '1px solid #CBD5E1' : 'none',
+                  background: active ? '#00358E' : '#fff',
+                  color: active ? '#fff' : '#475569',
+                }}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+        <span style={{ fontSize: '11px', color: 'var(--color-text-tertiary)' }}>
+          {style === 'sheet'
+            ? 'Mantém cores, negrito, alinhamento, mesclagens e larguras da planilha.'
+            : 'Aplica a identidade visual do painel (cabeçalho azul e colunas padronizadas).'}
+        </span>
+      </div>
+
       {/* Preview table */}
       <div style={{ flex: 1, overflow: 'auto', padding: '4px 16px 16px' }}>
-        {colCount > 0 ? (
+        {mirror ? (
+          <div style={{ border: '0.5px solid var(--color-border-tertiary)', borderRadius: 'var(--border-radius-md)', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+              <colgroup>
+                {grid.cols.map((w, i) => (
+                  <col key={i} style={{ width: `${((w / gridTotalWidth) * 100).toFixed(3)}%` }} />
+                ))}
+              </colgroup>
+              <tbody>
+                {grid.cells.map((row, ri) => (
+                  <tr key={ri}>
+                    {row.map((cell, ci) => {
+                      if (covered.has(`${ri},${ci}`)) return null;
+                      const merge = anchors.get(`${ri},${ci}`);
+                      return (
+                        <td
+                          key={ci}
+                          rowSpan={merge && merge.rs > 1 ? merge.rs : undefined}
+                          colSpan={merge && merge.cs > 1 ? merge.cs : undefined}
+                          style={{
+                            ...googleCellCss(cell),
+                            fontSize: `${Math.max(9, Math.min(20, Math.round((cell?.fs || 10) * 1.15)))}px`,
+                            border: '0.5px solid #D8DDE3',
+                            padding: '4px 6px',
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          {cell?.v ?? ''}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : colCount > 0 ? (
           <div style={{ border: '0.5px solid var(--color-border-tertiary)', borderRadius: 'var(--border-radius-md)', overflow: 'hidden' }}>
             <div style={{ display: 'grid', gridTemplateColumns: `repeat(${colCount}, 1fr)` }}>
               {preview.headers.map((h, i) => (

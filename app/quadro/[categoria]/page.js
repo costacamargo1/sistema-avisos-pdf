@@ -15,14 +15,24 @@ import GoogleSheetSync from '../../components/GoogleSheetSync';
 import ImageBoard from '../../components/ImageBoard';
 import AgendaSync from '../../components/AgendaBoard';
 
-const BASE_MODE_OPTIONS = [
+// Todos os modos estão disponíveis em todas as categorias (inclusive Pregão).
+const MODE_OPTIONS = [
   { value: 'structured', label: 'Lista estruturada' },
   { value: 'rich', label: 'Editor livre' },
+  { value: 'sheet', label: 'Planilha' },
+  { value: 'google', label: 'Sincronizar com Google' },
+  { value: 'image', label: 'Imagem' },
+  { value: 'agenda', label: 'Agenda Google' },
 ];
-const SHEET_MODE_OPTION = { value: 'sheet', label: 'Planilha' };
-const GOOGLE_MODE_OPTION = { value: 'google', label: 'Sincronizar com Google' };
-const IMAGE_MODE_OPTION = { value: 'image', label: 'Imagem' };
-const AGENDA_MODE_OPTION = { value: 'agenda', label: 'Agenda Google' };
+
+// Etiqueta do modo mostrada no item da barra lateral ('rich' não tem etiqueta).
+const MODE_BADGES = {
+  structured: { label: 'Lista', className: 'bg-blue-50 text-blue-700 border-blue-100' },
+  sheet: { label: 'Planilha', className: 'bg-amber-50 text-amber-700 border-amber-100' },
+  google: { label: 'Google', className: 'bg-cyan-50 text-cyan-700 border-cyan-100' },
+  image: { label: 'Imagem', className: 'bg-teal-50 text-teal-700 border-teal-100' },
+  agenda: { label: 'Agenda', className: 'bg-indigo-50 text-indigo-700 border-indigo-100' },
+};
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
@@ -118,6 +128,7 @@ export default function QuadroPage() {
             sheetItems: board.sheetItems || [],
             sheetHeaders: board.sheetHeaders || {},
             googleSheetUrl: board.googleSheetUrl || '',
+            googleSheetStyle: board.googleSheetStyle || 'project',
             imageUrl: board.imageUrl || '',
             calendarId: board.calendarId || '',
             agendaView: board.agendaView || 'list',
@@ -192,7 +203,7 @@ export default function QuadroPage() {
       id: generateId(), title: `Quadro ${boards.length + 1}`,
       content: null, isVisible: true, messageMode: false,
       boardMode: 'structured', structuredItems: [], sheetItems: [], sheetHeaders: {},
-      googleSheetUrl: '', imageUrl: '', calendarId: '', agendaView: 'list',
+      googleSheetUrl: '', googleSheetStyle: 'project', imageUrl: '', calendarId: '', agendaView: 'list',
       titleStyle: null,
       isMainScreen: false,
     };
@@ -207,7 +218,7 @@ export default function QuadroPage() {
     if (!confirm('Tem certeza que deseja excluir este quadro?')) return;
     const updated = boards.filter(b => b.id !== id);
     if (updated.length === 0) {
-      const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false, boardMode: 'structured', structuredItems: [], sheetItems: [], sheetHeaders: {}, googleSheetUrl: '', imageUrl: '', calendarId: '', agendaView: 'list', titleStyle: null, isMainScreen: false };
+      const def = { id: generateId(), title: 'Quadro 1', content: null, isVisible: true, messageMode: false, boardMode: 'structured', structuredItems: [], sheetItems: [], sheetHeaders: {}, googleSheetUrl: '', googleSheetStyle: 'project', imageUrl: '', calendarId: '', agendaView: 'list', titleStyle: null, isMainScreen: false };
       updated.push(def);
     }
     saveBoards(updated);
@@ -309,6 +320,10 @@ export default function QuadroPage() {
     saveBoards(boards.map(b => b.id === selectedId ? { ...b, googleSheetUrl } : b));
   };
 
+  const updateBoardGoogleSheetStyle = (googleSheetStyle) => {
+    saveBoards(boards.map(b => b.id === selectedId ? { ...b, googleSheetStyle } : b));
+  };
+
   const updateBoardImageUrl = (imageUrl) => {
     saveBoards(boards.map(b => b.id === selectedId ? { ...b, imageUrl } : b));
   };
@@ -327,11 +342,6 @@ export default function QuadroPage() {
   const isGoogle = selectedBoard?.boardMode === 'google';
   const isImage = selectedBoard?.boardMode === 'image';
   const isAgenda = selectedBoard?.boardMode === 'agenda';
-  // Planilha e Sincronização com Google disponíveis em Cotação, Setor Privado e Contratos Privado (Pregão usa só os modos base).
-  // Imagem e Agenda Google disponíveis em todas as categorias.
-  const modeOptions = (category === 'cotacao' || category === 'setorprivado' || category === 'contratospriv')
-    ? [...BASE_MODE_OPTIONS, SHEET_MODE_OPTION, GOOGLE_MODE_OPTION, IMAGE_MODE_OPTION, AGENDA_MODE_OPTION]
-    : [...BASE_MODE_OPTIONS, IMAGE_MODE_OPTION, AGENDA_MODE_OPTION];
 
   if (loading) {
     return (
@@ -385,6 +395,7 @@ export default function QuadroPage() {
               const isActive = selectedId === board.id;
               const isDragging = dragBoardId === board.id;
               const isDragOver = dragOverBoardId === board.id && dragBoardId !== board.id;
+              const modeBadge = MODE_BADGES[board.boardMode];
               return (
                 <div
                   key={board.id}
@@ -421,19 +432,13 @@ export default function QuadroPage() {
                       </span>
                     )}
                   </div>
-                  {(!board.isVisible || board.messageMode || board.boardMode === 'structured' || board.boardMode === 'image' || board.boardMode === 'agenda' || board.isMainScreen) && (
+                  {(!board.isVisible || board.messageMode || modeBadge || board.isMainScreen) && (
                     <div className="flex gap-1.5 mt-1.5 pl-[42px] flex-wrap">
                       {board.isMainScreen && (
                         <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">Tela principal</span>
                       )}
-                      {board.boardMode === 'structured' && (
-                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">Lista</span>
-                      )}
-                      {board.boardMode === 'image' && (
-                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-100">Imagem</span>
-                      )}
-                      {board.boardMode === 'agenda' && (
-                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">Agenda</span>
+                      {modeBadge && (
+                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${modeBadge.className}`}>{modeBadge.label}</span>
                       )}
                       {board.messageMode && (
                         <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 border border-purple-100">Mensagem</span>
@@ -490,7 +495,7 @@ export default function QuadroPage() {
                   )}
                 </div>
                 {!selectedBoard.messageMode && (
-                  <ModeToggle mode={selectedBoard.boardMode || 'rich'} onChange={(mode) => setBoardMode(selectedBoard.id, mode)} options={modeOptions} />
+                  <ModeToggle mode={selectedBoard.boardMode || 'rich'} onChange={(mode) => setBoardMode(selectedBoard.id, mode)} options={MODE_OPTIONS} />
                 )}
               </div>
 
@@ -579,8 +584,8 @@ export default function QuadroPage() {
                   <span className="font-semibold">Exiba uma planilha do Google Sheets direto na TV.</span>
                   <span>
                     Crie ou abra sua planilha no <strong>Google Sheets</strong>, clique em <strong>Compartilhar → Qualquer pessoa com o link → Leitor</strong>, copie o link e cole no campo abaixo.
-                    O painel passa a espelhar a planilha em tempo real, com as mesmas colunas, linhas e formatação — e atualiza sozinho a cada 20 minutos.
-                    Edite na planilha e a TV reflete o conteúdo na próxima atualização.
+                    O painel passa a espelhar a planilha em tempo real, com as mesmas colunas e linhas — e atualiza sozinho a cada 20 minutos.
+                    Em <strong>Formatação na TV</strong> você escolhe entre o visual padrão do painel e a formatação original da planilha (cores, negrito, mesclagens e larguras).
                   </span>
                 </div>
               )}
@@ -617,6 +622,8 @@ export default function QuadroPage() {
                     key={selectedBoard.id}
                     initialUrl={selectedBoard.googleSheetUrl || ''}
                     onUrlChange={updateBoardGoogleSheetUrl}
+                    initialStyle={selectedBoard.googleSheetStyle || 'project'}
+                    onStyleChange={updateBoardGoogleSheetStyle}
                   />
                 )}
 

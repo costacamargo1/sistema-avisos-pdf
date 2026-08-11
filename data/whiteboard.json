@@ -1,7 +1,7 @@
 [
   {
     "id": "bw29j2rdf",
-    "title": "TÍTULO",
+    "title": "FRACASSADOS",
     "content": {
       "title": {
         "type": "doc",
@@ -118,15 +118,42 @@
       "logoLayout": "left-center-medium",
       "verticalAlign": "middle"
     },
-    "isVisible": false,
+    "isVisible": true,
     "messageMode": false,
-    "boardMode": "rich",
+    "boardMode": "google",
     "structuredItems": [],
     "titleStyle": null,
     "isMainScreen": false,
-    "sheetItems": [],
-    "sheetHeaders": {},
-    "googleSheetUrl": ""
+    "sheetItems": [
+      {
+        "id": "wds4acyjh",
+        "orgao": "TESTE",
+        "pregao": "",
+        "abertura": "",
+        "prazo": "",
+        "produto": "",
+        "acao": "",
+        "ri": "",
+        "retorno": "",
+        "resultado": ""
+      }
+    ],
+    "sheetHeaders": {
+      "orgao": "ÓRGÃO",
+      "pregao": "UF",
+      "abertura": "PE",
+      "prazo": "ABERTURA",
+      "produto": "ITEM",
+      "acao": "FABRICANTE",
+      "ri": "QTD",
+      "retorno": "NOSSO VALOR",
+      "resultado": "ESTIMADO"
+    },
+    "googleSheetUrl": "https://docs.google.com/spreadsheets/d/1oGkxZl4tuTI2kB7WF43EDG0hw06Qpc7rO7M3_52195Y/edit?usp=sharing",
+    "imageUrl": "",
+    "calendarId": "",
+    "agendaView": "list",
+    "googleSheetStyle": "sheet"
   },
   {
     "id": "wo2qoek2c",
@@ -207,9 +234,13 @@
       }
     ],
     "titleStyle": null,
-    "isMainScreen": true,
+    "isMainScreen": false,
     "sheetItems": [],
     "sheetHeaders": {},
-    "googleSheetUrl": ""
+    "googleSheetUrl": "",
+    "imageUrl": "",
+    "calendarId": "",
+    "agendaView": "list",
+    "googleSheetStyle": "project"
   }
 ]

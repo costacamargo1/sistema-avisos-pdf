@@ -5,7 +5,7 @@
     "content": null,
     "isVisible": true,
     "messageMode": false,
-    "boardMode": "agenda",
+    "boardMode": "google",
     "structuredItems": [],
     "sheetItems": [],
     "sheetHeaders": {},
@@ -14,6 +14,7 @@
     "isMainScreen": false,
     "imageUrl": "",
     "calendarId": "https://calendar.google.com/calendar/embed?src=tuliogarcia94%40gmail.com&ctz=America%2FSao_Paulo",
-    "agendaView": "week"
+    "agendaView": "week",
+    "googleSheetStyle": "project"
   }
 ]

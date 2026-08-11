@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Plus, Trash2, ChevronUp, ChevronDown, Bold, Minus, RotateCcw } from 'lucide-react';
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -235,8 +235,132 @@ function freeColumnFlex(headers, rows, colIndex) {
   return 0.8;
 }
 
-export function GoogleSheetDisplay({ boardTitle, headers = [], rows = [], logoSrc, titleStyle: rawTitleStyle }) {
+// ─── ESPELHO DA FORMATAÇÃO ORIGINAL DA PLANILHA ───────────────────────────────
+// Usa o `grid` vindo de /api/sheets?format=1 (cores, negrito, alinhamento,
+// mesclagens e larguras de coluna definidos no próprio Google Sheets).
+
+// Sem alinhamento explícito, o Sheets encosta número à direita e texto à esquerda.
+const NUMERIC_CELL = /^[-+]?\s*(r\$|us\$|€)?\s*[\d.,]+\s*%?$/i;
+
+// CSS de uma célula do espelho, sem o corpo da fonte (escalado à parte).
+// Exportado para o preview do editor mostrar exatamente o mesmo visual.
+export function googleCellCss(cell) {
+  const c = cell || {};
+  const decoration = [c.u ? 'underline' : '', c.s ? 'line-through' : ''].filter(Boolean).join(' ');
+  const align = c.ha === 'CENTER' ? 'center'
+    : c.ha === 'RIGHT' ? 'right'
+      : c.ha === 'LEFT' ? 'left'
+        : (NUMERIC_CELL.test(String(c.v || '').trim()) ? 'right' : 'left');
+  return {
+    background: c.bg || '#fff',
+    color: c.fg || '#1F2937',
+    fontWeight: c.b ? 700 : 400,
+    fontStyle: c.i ? 'italic' : 'normal',
+    textDecoration: decoration || 'none',
+    textAlign: align,
+    verticalAlign: c.va === 'TOP' ? 'top' : c.va === 'BOTTOM' ? 'bottom' : 'middle',
+    fontFamily: c.ff ? `'${c.ff}', 'Aptos', sans-serif` : undefined,
+    whiteSpace: c.w ? 'pre-wrap' : 'nowrap',
+    wordBreak: c.w ? 'break-word' : 'normal',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  };
+}
+
+// Âncoras das células mescladas e as posições que elas engolem.
+export function googleMergeMaps(merges) {
+  const anchors = new Map();
+  const covered = new Set();
+  for (const m of merges || []) {
+    anchors.set(`${m.r},${m.c}`, m);
+    for (let r = m.r; r < m.r + m.rs; r++) {
+      for (let c = m.c; c < m.c + m.cs; c++) {
+        if (r !== m.r || c !== m.c) covered.add(`${r},${c}`);
+      }
+    }
+  }
+  return { anchors, covered };
+}
+
+// Corpo de fonte mais frequente da planilha: vira a referência 1x da escala,
+// preservando a hierarquia relativa (título maior, nota de rodapé menor).
+function baselineFontSize(cells) {
+  const tally = new Map();
+  for (const row of cells) {
+    for (const cell of row) {
+      if (!cell?.fs) continue;
+      tally.set(cell.fs, (tally.get(cell.fs) || 0) + 1);
+    }
+  }
+  let best = 10;
+  let bestCount = 0;
+  for (const [size, count] of tally) {
+    if (count > bestCount) { best = size; bestCount = count; }
+  }
+  return best;
+}
+
+function GoogleSheetMirror({ grid }) {
+  const cells = useMemo(() => grid?.cells || [], [grid?.cells]);
+  const cols = grid?.cols || [];
+  const { anchors, covered } = useMemo(() => googleMergeMaps(grid?.merges), [grid?.merges]);
+  const baseline = useMemo(() => baselineFontSize(cells), [cells]);
+
+  // Mesma escala por nº de linhas do estilo do projeto, para caber na TV.
+  const count = cells.length || 1;
+  const baseVw = count <= 6 ? 1.1
+    : count <= 10 ? 0.9
+      : count <= 14 ? 0.75
+        : count <= 18 ? 0.64
+          : 0.56;
+
+  const totalWidth = cols.reduce((sum, w) => sum + w, 0) || 1;
+  const fontFor = (cell) => {
+    const ratio = cell?.fs ? Math.max(0.6, Math.min(2.4, cell.fs / baseline)) : 1;
+    return `${(baseVw * ratio).toFixed(3)}vw`;
+  };
+
+  return (
+    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+      <colgroup>
+        {cols.map((w, i) => (
+          <col key={i} style={{ width: `${((w / totalWidth) * 100).toFixed(3)}%` }} />
+        ))}
+      </colgroup>
+      <tbody>
+        {cells.map((row, ri) => (
+          <tr key={ri}>
+            {row.map((cell, ci) => {
+              if (covered.has(`${ri},${ci}`)) return null;
+              const merge = anchors.get(`${ri},${ci}`);
+              return (
+                <td
+                  key={ci}
+                  rowSpan={merge && merge.rs > 1 ? merge.rs : undefined}
+                  colSpan={merge && merge.cs > 1 ? merge.cs : undefined}
+                  style={{
+                    ...googleCellCss(cell),
+                    fontSize: fontFor(cell),
+                    border: '1px solid #D8DDE3',
+                    padding: '0.28vw 0.45vw',
+                    lineHeight: 1.25,
+                  }}
+                >
+                  {cell?.v ?? ''}
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+export function GoogleSheetDisplay({ boardTitle, headers = [], rows = [], logoSrc, titleStyle: rawTitleStyle, styleMode = 'project', grid = null }) {
   const titleStyle = rawTitleStyle ?? {};
+  // Só espelha se a formatação chegou; senão mantém o estilo do projeto.
+  const mirror = styleMode === 'sheet' && (grid?.cells?.length || 0) > 0;
   const scrollRef = useRef(null);
   const colCount = headers.length;
   const gridTemplate = colCount > 0
@@ -295,7 +419,9 @@ export function GoogleSheetDisplay({ boardTitle, headers = [], rows = [], logoSr
           overscrollBehavior: 'contain',
         }}
       >
-        {colCount > 0 ? (
+        {mirror ? (
+          <GoogleSheetMirror grid={grid} />
+        ) : colCount > 0 ? (
           <div style={{ border: '1px solid #1F2937', borderRadius: '4px', overflow: 'hidden' }}>
             <div style={{
               display: 'grid',

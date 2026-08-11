@@ -442,12 +442,15 @@ export default function ClientApp({
 
   // Busca os dados do Google Sheets para o quadro atual e atualiza a cada 20 min.
   const googleUrl = isGoogleBoard ? (currentBoard?.googleSheetUrl || '') : '';
+  // 'sheet' espelha a formatação original da planilha; 'project' usa o estilo do painel.
+  const googleStyle = isGoogleBoard ? (currentBoard?.googleSheetStyle || 'project') : 'project';
   useEffect(() => {
     if (!googleUrl) { setGoogleData(null); return; }
     let cancelled = false;
     const load = async () => {
       try {
-        const res = await fetch(`/api/sheets?url=${encodeURIComponent(googleUrl)}`, { cache: 'no-store' });
+        const formatParam = googleStyle === 'sheet' ? '&format=1' : '';
+        const res = await fetch(`/api/sheets?url=${encodeURIComponent(googleUrl)}${formatParam}`, { cache: 'no-store' });
         const data = await res.json().catch(() => null);
         if (!cancelled && res.ok && data) setGoogleData(data);
       } catch {}
@@ -455,7 +458,7 @@ export default function ClientApp({
     load();
     const id = setInterval(load, GOOGLE_SHEET_REFRESH_MS);
     return () => { cancelled = true; clearInterval(id); };
-  }, [googleUrl, googleRefreshKey]);
+  }, [googleUrl, googleStyle, googleRefreshKey]);
 
   // Busca os eventos do Google Agenda para o quadro atual e atualiza a cada 20 min.
   const agendaId = isAgendaBoard ? (currentBoard?.calendarId || '') : '';
@@ -777,6 +780,8 @@ export default function ClientApp({
               rows={googleData?.rows || []}
               logoSrc="/logogrande.png"
               titleStyle={currentBoard.titleStyle || null}
+              styleMode={googleStyle}
+              grid={googleData?.grid || null}
             />
           )}
 
