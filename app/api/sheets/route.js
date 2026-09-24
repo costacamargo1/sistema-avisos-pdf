@@ -82,10 +82,11 @@ function compactCell(cell) {
 }
 
 // Lê a mesma faixa de dados novamente, agora com a formatação original da planilha.
+// `skip` pula as linhas do topo que viraram título do quadro.
 // Retorna null em qualquer falha: o painel simplesmente cai no estilo do projeto.
-async function fetchGrid(client, spreadsheetId, title, rowCount, colCount) {
+async function fetchGrid(client, spreadsheetId, title, rowCount, colCount, skip = 0) {
   try {
-    const ref = `A1:${colLetter(colCount - 1)}${Math.min(rowCount, MAX_GRID_ROWS)}`;
+    const ref = `A${skip + 1}:${colLetter(colCount - 1)}${Math.min(rowCount, skip + MAX_GRID_ROWS)}`;
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`
       + `?includeGridData=true&ranges=${encodeURIComponent(a1Range(title, ref))}`
       + `&fields=${encodeURIComponent(GRID_FIELDS)}`;
@@ -105,13 +106,13 @@ async function fetchGrid(client, spreadsheetId, title, rowCount, colCount) {
     const cols = [];
     for (let i = 0; i < colCount; i++) cols.push(data.columnMetadata?.[i]?.pixelSize || 100);
 
-    // Merges vêm em coordenadas absolutas da aba; a faixa começa em A1, então batem direto.
+    // Merges vêm em coordenadas absolutas da aba; desloca pelas linhas puladas.
     const merges = (sheet.merges || [])
-      .filter(m => m.startRowIndex < cells.length && m.startColumnIndex < colCount)
+      .filter(m => m.startRowIndex >= skip && m.startRowIndex - skip < cells.length && m.startColumnIndex < colCount)
       .map(m => ({
-        r: m.startRowIndex,
+        r: m.startRowIndex - skip,
         c: m.startColumnIndex,
-        rs: Math.min(m.endRowIndex, cells.length) - m.startRowIndex,
+        rs: Math.min(m.endRowIndex - skip, cells.length) - (m.startRowIndex - skip),
         cs: Math.min(m.endColumnIndex, colCount) - m.startColumnIndex,
       }))
       .filter(m => m.rs > 0 && m.cs > 0 && (m.rs > 1 || m.cs > 1));
@@ -202,9 +203,22 @@ export async function GET(request) {
     }
 
     // Espelho livre: 1ª linha = cabeçalho, demais = dados.
-    const headers = values[0].map(h => String(h ?? '').trim());
-    const colCount = headers.length;
-    const rows = values.slice(1).map(row => {
+    // A API corta células vazias no fim de cada linha (ex.: título mesclado em
+    // A1:G1 volta como 1 valor só), então a largura vem da linha mais longa.
+    const colCount = values.reduce((max, row) => Math.max(max, row?.length || 0), 0);
+
+    // Linha 1 com um único texto (título mesclado) seguida de uma linha com
+    // vários campos: a linha 1 vira o título do quadro na TV (sheetTitle) e sai
+    // da tabela nos dois modos; o cabeçalho real passa a ser a linha 2.
+    const filled = (row) => (row || []).filter(v => String(v ?? '').trim()).length;
+    const headerIndex = colCount > 1 && filled(values[0]) === 1 && filled(values[1]) > 1 ? 1 : 0;
+    const sheetTitle = headerIndex === 1
+      ? String(values[0].find(v => String(v ?? '').trim())).trim()
+      : null;
+
+    const headers = [];
+    for (let i = 0; i < colCount; i++) headers.push(String(values[headerIndex][i] ?? '').trim());
+    const rows = values.slice(headerIndex + 1).map(row => {
       const cells = [];
       for (let i = 0; i < colCount; i++) cells.push(String(row[i] ?? ''));
       return cells;
@@ -214,10 +228,13 @@ export async function GET(request) {
     // requisição a mais e o estilo do projeto não precisa dela.
     const wantsFormat = searchParams.get('format') === '1';
     const grid = wantsFormat
-      ? await fetchGrid(client, spreadsheetId, title, values.length, colCount)
+      ? await fetchGrid(client, spreadsheetId, title, values.length, colCount, headerIndex)
       : null;
 
-    return NextResponse.json(grid ? { headers, rows, title, grid } : { headers, rows, title });
+    const payload = { headers, rows, title };
+    if (sheetTitle) payload.sheetTitle = sheetTitle;
+    if (grid) payload.grid = grid;
+    return NextResponse.json(payload);
   } catch (error) {
     const status = error?.response?.status;
     if (status === 403) {

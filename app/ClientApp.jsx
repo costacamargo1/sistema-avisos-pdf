@@ -775,7 +775,7 @@ export default function ClientApp({
           {tvPhase === 'whiteboard' && currentBoard && isGoogleBoard && (
             <GoogleSheetDisplay
               key={currentBoard.id || `gs-${currentBoardIndex}`}
-              boardTitle={currentBoard.title || ''}
+              boardTitle={googleData?.sheetTitle || currentBoard.title || ''}
               headers={googleData?.headers || []}
               rows={googleData?.rows || []}
               logoSrc="/logogrande.png"

@@ -1,70 +1,20 @@
 [
   {
-    "id": "default",
-    "title": "Quadro 1",
-    "titleStyle": null,
-    "content": {
-      "title": {
-        "type": "doc",
-        "content": [
-          {
-            "type": "paragraph",
-            "attrs": {
-              "textAlign": "center"
-            },
-            "content": [
-              {
-                "type": "text",
-                "marks": [
-                  {
-                    "type": "textStyle",
-                    "attrs": {
-                      "fontFamily": "Montserrat",
-                      "fontSize": "58px",
-                      "lineHeight": null,
-                      "color": "#00358E"
-                    }
-                  },
-                  {
-                    "type": "bold"
-                  }
-                ],
-                "text": "Quadro 1"
-              }
-            ]
-          }
-        ]
-      },
-      "body": {
-        "type": "doc",
-        "content": [
-          {
-            "type": "paragraph",
-            "attrs": {
-              "textAlign": null
-            },
-            "content": [
-              {
-                "type": "text",
-                "text": "Bem-vindo ao Quadro de Avisos!"
-              }
-            ]
-          }
-        ]
-      },
-      "logoLayout": "bottom-right-small",
-      "verticalAlign": "top"
-    },
+    "id": "odplvi2q3",
+    "title": "Quadro 2",
+    "content": null,
     "isVisible": true,
     "messageMode": false,
-    "isMainScreen": false,
-    "boardMode": "rich",
+    "boardMode": "agenda",
     "structuredItems": [],
     "sheetItems": [],
     "sheetHeaders": {},
-    "googleSheetUrl": "",
+    "googleSheetUrl": "e92668c68b4f7241f42a68b3605ad29f13377632cf9aff44f5d2fcdd4896e541@group.calendar.google.com",
+    "googleSheetStyle": "project",
     "imageUrl": "",
-    "calendarId": "",
-    "agendaView": "list"
+    "calendarId": "https://calendar.google.com/calendar/embed?src=e92668c68b4f7241f42a68b3605ad29f13377632cf9aff44f5d2fcdd4896e541%40group.calendar.google.com&ctz=America%2FSao_Paulo",
+    "agendaView": "list",
+    "titleStyle": null,
+    "isMainScreen": true
   }
 ]

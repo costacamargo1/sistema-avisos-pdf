@@ -308,13 +308,16 @@ function GoogleSheetMirror({ grid }) {
 
   // Mesma escala por nº de linhas do estilo do projeto, para caber na TV.
   const count = cells.length || 1;
-  const baseVw = count <= 6 ? 1.1
+  const rowsVw = count <= 6 ? 1.1
     : count <= 10 ? 0.9
       : count <= 14 ? 0.75
         : count <= 18 ? 0.64
           : 0.56;
 
+  // Teto proporcional às larguras da planilha (pt → px, ~90vw de tabela):
+  // o que cabe na coluna do Sheets cabe na TV, sem cortar com "…".
   const totalWidth = cols.reduce((sum, w) => sum + w, 0) || 1;
+  const baseVw = Math.min(rowsVw, (baseline * 4 / 3 / totalWidth) * 90);
   const fontFor = (cell) => {
     const ratio = cell?.fs ? Math.max(0.6, Math.min(2.4, cell.fs / baseline)) : 1;
     return `${(baseVw * ratio).toFixed(3)}vw`;
@@ -342,7 +345,7 @@ function GoogleSheetMirror({ grid }) {
                     ...googleCellCss(cell),
                     fontSize: fontFor(cell),
                     border: '1px solid #D8DDE3',
-                    padding: '0.28vw 0.45vw',
+                    padding: '0.28vw 0.2vw',
                     lineHeight: 1.25,
                   }}
                 >

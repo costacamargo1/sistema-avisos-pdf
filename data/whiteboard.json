@@ -204,7 +204,7 @@
       "logoLayout": "bottom-right-small",
       "verticalAlign": "top"
     },
-    "isVisible": true,
+    "isVisible": false,
     "messageMode": false,
     "boardMode": "structured",
     "structuredItems": [
@@ -242,5 +242,23 @@
     "calendarId": "",
     "agendaView": "list",
     "googleSheetStyle": "project"
+  },
+  {
+    "id": "mqq2lf7tx",
+    "title": "Quadro 3",
+    "content": null,
+    "isVisible": true,
+    "messageMode": false,
+    "boardMode": "google",
+    "structuredItems": [],
+    "sheetItems": [],
+    "sheetHeaders": {},
+    "googleSheetUrl": "https://docs.google.com/spreadsheets/d/13q0FrPqbVUHOHwz7erA0c2VK5q18oMtAa2Bjx5jo9G8/edit?gid=0#gid=0",
+    "googleSheetStyle": "sheet",
+    "imageUrl": "",
+    "calendarId": "",
+    "agendaView": "list",
+    "titleStyle": null,
+    "isMainScreen": false
   }
 ]

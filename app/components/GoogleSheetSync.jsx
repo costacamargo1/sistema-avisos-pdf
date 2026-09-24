@@ -165,6 +165,11 @@ export default function GoogleSheetSync({ initialUrl = '', onUrlChange, initialS
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#16A34A' }}>
             <CheckCircle2 style={{ width: 14, height: 14 }} />
             Conectado — “{preview?.title}” · {colCount} colunas · {preview?.rows?.length || 0} linhas
+            {preview?.sheetTitle && (
+              <span style={{ color: 'var(--color-text-tertiary)' }}>
+                · linha 1 usada como título na TV: “{preview.sheetTitle}”
+              </span>
+            )}
           </span>
         )}
         {status === 'error' && (
