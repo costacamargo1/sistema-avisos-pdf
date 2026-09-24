@@ -360,7 +360,7 @@ function GoogleSheetMirror({ grid }) {
   );
 }
 
-export function GoogleSheetDisplay({ boardTitle, headers = [], rows = [], logoSrc, titleStyle: rawTitleStyle, styleMode = 'project', grid = null }) {
+export function GoogleSheetDisplay({ boardTitle, headers = [], rows = [], logoSrc, titleStyle: rawTitleStyle, styleMode = 'project', grid = null, loading = false }) {
   const titleStyle = rawTitleStyle ?? {};
   // Só espelha se a formatação chegou; senão mantém o estilo do projeto.
   const mirror = styleMode === 'sheet' && (grid?.cells?.length || 0) > 0;
@@ -472,7 +472,7 @@ export function GoogleSheetDisplay({ boardTitle, headers = [], rows = [], logoSr
               </div>
             ))}
           </div>
-        ) : (
+        ) : loading ? null : (
           <div style={{ color: '#9CA3AF', fontSize: '1.6vw', textAlign: 'center', padding: '4vw 0' }}>
             Nenhum dado da planilha
           </div>

@@ -14,6 +14,23 @@ import { AgendaDisplay } from './components/AgendaBoard';
 
 const GOOGLE_SHEET_REFRESH_MS = 20 * 60 * 1000; // 20 minutos
 
+// URL da API que alimenta um quadro Google (planilha ou agenda); '' se não houver.
+// Também é a chave do cache de dados dos quadros.
+function boardDataUrl(board) {
+  if (board?.boardMode === 'google' && board.googleSheetUrl) {
+    const formatParam = board.googleSheetStyle === 'sheet' ? '&format=1' : '';
+    return `/api/sheets?url=${encodeURIComponent(board.googleSheetUrl)}${formatParam}`;
+  }
+  if (board?.boardMode === 'agenda' && !board.messageMode && board.calendarId) {
+    // Mês precisa de uma janela maior (grade do mês inteiro + dias da 1ª/última semana);
+    // semana mostra apenas a semana atual; lista usa a janela padrão de 7 dias.
+    const view = board.agendaView || 'list';
+    const query = view === 'month' ? '&days=42&back=7' : view === 'week' ? '&days=7&back=7' : '';
+    return `/api/calendar?calendar=${encodeURIComponent(board.calendarId)}${query}`;
+  }
+  return '';
+}
+
 export default function ClientApp({
   category = 'pregao',
   pdfEnabled = true,
@@ -46,9 +63,11 @@ export default function ClientApp({
   const [uiVisible, setUiVisible] = useState(true);
   const hideUiTimerRef = useRef(null);
 
-  const [googleData, setGoogleData] = useState(null); // { headers, rows, title }
+  // Última resposta de cada quadro Google (planilha/agenda), pela URL da API.
+  // Trocar de quadro mostra o cache na hora enquanto a versão nova chega.
+  const [boardDataCache, setBoardDataCache] = useState({});
+  const requestedDataRef = useRef(new Set());
   const [googleRefreshKey, setGoogleRefreshKey] = useState(0);
-  const [agendaData, setAgendaData] = useState(null); // { title, events }
 
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
@@ -440,50 +459,38 @@ export default function ClientApp({
     }
   }, [tvPhase, visibleBoards, currentBoardIndex]);
 
-  // Busca os dados do Google Sheets para o quadro atual e atualiza a cada 20 min.
   const googleUrl = isGoogleBoard ? (currentBoard?.googleSheetUrl || '') : '';
   // 'sheet' espelha a formatação original da planilha; 'project' usa o estilo do painel.
   const googleStyle = isGoogleBoard ? (currentBoard?.googleSheetStyle || 'project') : 'project';
-  useEffect(() => {
-    if (!googleUrl) { setGoogleData(null); return; }
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const formatParam = googleStyle === 'sheet' ? '&format=1' : '';
-        const res = await fetch(`/api/sheets?url=${encodeURIComponent(googleUrl)}${formatParam}`, { cache: 'no-store' });
-        const data = await res.json().catch(() => null);
-        if (!cancelled && res.ok && data) setGoogleData(data);
-      } catch {}
-    };
-    load();
-    const id = setInterval(load, GOOGLE_SHEET_REFRESH_MS);
-    return () => { cancelled = true; clearInterval(id); };
-  }, [googleUrl, googleStyle, googleRefreshKey]);
 
-  // Busca os eventos do Google Agenda para o quadro atual e atualiza a cada 20 min.
-  const agendaId = isAgendaBoard ? (currentBoard?.calendarId || '') : '';
-  const agendaView = isAgendaBoard ? (currentBoard?.agendaView || 'list') : 'list';
+  const loadBoardData = useCallback(async (url) => {
+    requestedDataRef.current.add(url);
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data) setBoardDataCache(cache => ({ ...cache, [url]: data }));
+    } catch {}
+  }, []);
+
+  const currentDataUrl = tvPhase === 'whiteboard' ? boardDataUrl(currentBoard) : '';
+  const googleData = isGoogleBoard ? (boardDataCache[currentDataUrl] || null) : null; // { headers, rows, title, sheetTitle, grid }
+  const agendaData = isAgendaBoard ? (boardDataCache[currentDataUrl] || null) : null; // { title, events }
+
+  // Quadro atual: revalida ao entrar (o cache já está na tela) e a cada 20 min.
   useEffect(() => {
-    if (!agendaId) { setAgendaData(null); return; }
-    let cancelled = false;
-    // Mês precisa de uma janela maior (grade do mês inteiro + dias da 1ª/última semana);
-    // semana mostra apenas a semana atual; lista usa a janela padrão de 7 dias.
-    const query = agendaView === 'month'
-      ? `&days=42&back=7`
-      : agendaView === 'week'
-        ? `&days=7&back=7`
-        : '';
-    const load = async () => {
-      try {
-        const res = await fetch(`/api/calendar?calendar=${encodeURIComponent(agendaId)}${query}`, { cache: 'no-store' });
-        const data = await res.json().catch(() => null);
-        if (!cancelled && res.ok && data) setAgendaData(data);
-      } catch {}
-    };
-    load();
-    const id = setInterval(load, GOOGLE_SHEET_REFRESH_MS);
-    return () => { cancelled = true; clearInterval(id); };
-  }, [agendaId, agendaView]);
+    if (!currentDataUrl) return;
+    loadBoardData(currentDataUrl);
+    const id = setInterval(() => loadBoardData(currentDataUrl), GOOGLE_SHEET_REFRESH_MS);
+    return () => clearInterval(id);
+  }, [currentDataUrl, googleRefreshKey, loadBoardData]);
+
+  // Pré-carrega uma vez os demais quadros da rotação: o primeiro giro já entra pronto.
+  useEffect(() => {
+    for (const board of visibleBoards) {
+      const url = boardDataUrl(board);
+      if (url && !requestedDataRef.current.has(url)) loadBoardData(url);
+    }
+  }, [visibleBoards, loadBoardData]);
 
   // Efeito para redimensionamento e renderização ao mudar página ou entrar em TV mode
   useEffect(() => {
@@ -782,6 +789,7 @@ export default function ClientApp({
               titleStyle={currentBoard.titleStyle || null}
               styleMode={googleStyle}
               grid={googleData?.grid || null}
+              loading={!googleData}
             />
           )}
 
